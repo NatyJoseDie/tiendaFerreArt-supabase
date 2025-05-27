@@ -28,7 +28,7 @@ export function TabsNav({ userType }: TabsNavProps) {
       { id: 'home', label: 'Home', href: '/dashboard', icon: Home },
       { id: 'listaCostos', label: 'Costos Privados', href: '/dashboard/lista-costos', icon: DollarSign },
       { id: 'listaComercios', label: 'Para Comercios', href: '/dashboard/lista-comercios', icon: ShoppingBag },
-      // { id: 'listaFinal', label: 'Consumidor Final', href: '/dashboard/lista-final', icon: ListChecks }, // Removed
+      { id: 'listaFinal', label: 'Consumidor Final', href: '/dashboard/lista-final', icon: ListChecks },
       { id: 'catalogoVendedora', label: 'Mi Catálogo (Público)', href: '/dashboard/catalogo-vendedora', icon: Camera },
       { id: 'ventas', label: 'Gestión de Ventas', href: '/dashboard/ventas', icon: BarChart2 },
     ];
@@ -69,3 +69,5 @@ export function TabsNav({ userType }: TabsNavProps) {
     </nav>
   );
 }
+
+    

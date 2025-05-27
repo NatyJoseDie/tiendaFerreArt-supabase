@@ -5,17 +5,18 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input'; // No se usa pero lo dejo por si acaso en el futuro
+import { Label } from '@/components/ui/label'; // No se usa pero lo dejo
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Camera, Percent, Edit } from 'lucide-react';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
+const DEFAULT_MARGIN = 50; // Default margin if not found or invalid
 
 export default function CatalogoVendedoraPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [margenFinal, setMargenFinal] = useState<number>(50); // Default margin 50%
+  const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN); // Este margen se lee de localStorage
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -41,26 +42,14 @@ export default function CatalogoVendedoraPage() {
     setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    // Save margin to localStorage whenever it changes
-    localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, margenFinal.toString());
-  }, [margenFinal]);
-
-  const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMargen = parseFloat(e.target.value);
-    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
-      setMargenFinal(newMargen);
-    } else if (e.target.value === "") {
-      setMargenFinal(0);
-    }
-  };
+  // No hay handleMargenChange aquí, el margen se define en ListaFinalPage
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Mi Catálogo (Vendedora)"
-          description="Visualiza y gestiona la presentación de tus productos y el margen de ganancia para el consumidor final."
+          title="Mi Catálogo (Precios al Público)"
+          description="Visualiza tus productos con el precio final para el consumidor."
         />
         <Card className="shadow-md animate-pulse">
           <CardHeader>
@@ -68,13 +57,6 @@ export default function CatalogoVendedoraPage() {
             <div className="h-4 bg-muted rounded w-1/2 mt-1"></div>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 max-w-xs">
-              <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
-              <div className="flex items-center space-x-2 mt-1">
-                <div className="h-10 w-24 bg-muted rounded"></div>
-                <div className="h-5 w-5 bg-muted rounded-full"></div>
-              </div>
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, index) => (
                 <Card key={index}>
@@ -99,7 +81,7 @@ export default function CatalogoVendedoraPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi Catálogo (Precios al Público)"
-        description="Visualiza cómo se ven tus productos con el precio final para el consumidor y ajusta el margen de ganancia."
+        description={`Visualiza cómo se ven tus productos con el precio final para el consumidor (margen actual: ${margenFinal}%). Este margen se ajusta en "Consumidor Final".`}
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -108,32 +90,10 @@ export default function CatalogoVendedoraPage() {
             Catálogo con Precios de Venta al Público
           </CardTitle>
           <CardDescription>
-            Ajusta el margen de ganancia que se aplicará a los precios base para la venta al consumidor final. Este margen también se usará en el Catálogo Público.
+            Los precios mostrados incluyen el margen de ganancia del {margenFinal}% definido en la sección "Consumidor Final".
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Card className="mb-8 p-4 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-md shadow">
-            <Label htmlFor="margen-final" className="text-sm font-medium block mb-1 text-blue-700 dark:text-blue-300">
-              <Edit className="inline-block mr-1 h-4 w-4" />
-              Ajustar Margen de Ganancia para Consumidor Final (%):
-            </Label>
-            <div className="flex items-center space-x-2 mt-1">
-              <Input
-                id="margen-final"
-                type="number"
-                value={margenFinal}
-                min={0}
-                max={500}
-                onChange={handleMargenChange}
-                className="w-28 text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <Percent className="h-5 w-5 text-muted-foreground" />
-            </div>
-             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-              Este margen se aplicará a los precios base para calcular los precios de venta al público.
-            </p>
-          </Card>
-          
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
@@ -179,3 +139,5 @@ export default function CatalogoVendedoraPage() {
     </div>
   );
 }
+
+    

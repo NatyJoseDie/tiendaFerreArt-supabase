@@ -1,70 +1,199 @@
+
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import type { User } from '@/lib/authUtils';
-import { Home, ListChecks, ShoppingBag, BarChart2, Camera, DollarSign } from 'lucide-react';
+import { useState, useEffect, type ChangeEvent } from 'react';
+import { PageHeader } from '@/components/shared/page-header';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { getAllProducts } from '@/data/mock-products';
+import type { Product } from '@/lib/types';
+import { DollarSign, Percent, Edit } from 'lucide-react';
 
-interface Tab {
-  id: string;
-  label: string;
-  href: string;
-  icon?: React.ElementType;
-}
+const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
+const DEFAULT_MARGIN = 50; // Default margin if not found or invalid
 
-interface TabsNavProps {
-  userType: User['userType'] | undefined;
-}
+export default function ListaFinalPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN);
+  const [isLoading, setIsLoading] = useState(true);
 
-export function TabsNav({ userType }: TabsNavProps) {
-  const pathname = usePathname();
-  let tabs: Tab[] = [];
+  useEffect(() => {
+    const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
+    if (storedMargin) {
+      const parsedMargin = parseFloat(storedMargin);
+      if (!isNaN(parsedMargin)) {
+        setMargenFinal(parsedMargin);
+      }
+    }
 
-  if (userType === 'vendedora') {
-    tabs = [
-      { id: 'home', label: 'Home', href: '/dashboard', icon: Home },
-      { id: 'listaCostos', label: 'Costos Privados', href: '/dashboard/lista-costos', icon: DollarSign },
-      { id: 'listaComercios', label: 'Para Comercios', href: '/dashboard/lista-comercios', icon: ShoppingBag },
-      // { id: 'listaFinal', label: 'Consumidor Final', href: '/dashboard/lista-final', icon: ListChecks }, // Removed
-      { id: 'catalogoVendedora', label: 'Mi Catálogo (Público)', href: '/dashboard/catalogo-vendedora', icon: Camera },
-      { id: 'ventas', label: 'Gestión de Ventas', href: '/dashboard/ventas', icon: BarChart2 },
-    ];
-  } else if (userType === 'cliente') {
-    tabs = [
-      { id: 'home', label: 'Home', href: '/dashboard', icon: Home },
-      { id: 'listaCliente', label: 'Mis Precios', href: '/dashboard/lista-cliente', icon: DollarSign },
-      { id: 'catalogoCliente', label: 'Mi Catálogo', href: '/dashboard/catalogo-cliente', icon: Camera },
-    ];
-  }
+    const masterProductList = localStorage.getItem('masterProductList');
+    if (masterProductList) {
+      try {
+        setProducts(JSON.parse(masterProductList));
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        setProducts(getAllProducts());
+      }
+    } else {
+      setProducts(getAllProducts());
+    }
+    setIsLoading(false);
+  }, []);
 
-  if (tabs.length === 0) {
-    return null; 
+  useEffect(() => {
+    // Save margin to localStorage whenever it changes
+    localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, margenFinal.toString());
+  }, [margenFinal]);
+
+  const handleMargenChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newMargen = parseFloat(e.target.value);
+    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) { // Max margin 500%
+      setMargenFinal(newMargen);
+    } else if (e.target.value === "") {
+      setMargenFinal(0); // Set to 0 if input is cleared
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Lista de Precios para Consumidor Final"
+          description="Ajusta el margen de ganancia y consulta los precios finales."
+        />
+        <Card className="animate-pulse">
+          <CardHeader>
+            <div className="h-6 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mt-1"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 max-w-xs">
+              <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+              <div className="flex items-center space-x-2 mt-1">
+                <div className="h-10 w-24 bg-muted rounded"></div>
+                <div className="h-5 w-5 bg-muted rounded-full"></div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                    <TableHead><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                    <TableHead><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <nav className="flex flex-wrap gap-2 p-4 border-b bg-card">
-      {tabs.map((tab) => {
-        const isActive = pathname === tab.href || (tab.href === '/dashboard' && pathname.startsWith('/dashboard') && tabs.find(t => t.href === pathname) === undefined && pathname.split('/').length <= 3);
-        
-        return (
-          <Button
-            key={tab.id}
-            asChild
-            variant={isActive ? 'default' : 'outline'}
-            className={cn(
-              "transition-all",
-              isActive ? "shadow-md" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Link href={tab.href}>
-              {tab.icon && <tab.icon className="mr-2 h-4 w-4" />}
-              {tab.label}
-            </Link>
-          </Button>
-        );
-      })}
-    </nav>
+    <div className="space-y-6">
+      <PageHeader
+        title="Lista de Precios para Consumidor Final"
+        description="Ajusta el margen de ganancia y consulta los precios finales. Este margen también afectará al Catálogo Público."
+      />
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <DollarSign className="mr-2 h-5 w-5 text-primary" />
+            Definir Precios al Público
+          </CardTitle>
+          <CardDescription>
+            Ingresa el margen de ganancia que se aplicará sobre el precio base para la venta al consumidor final.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Card className="mb-8 p-4 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-md shadow">
+            <Label htmlFor="margen-final" className="text-sm font-medium block mb-1 text-blue-700 dark:text-blue-300">
+              <Edit className="inline-block mr-1 h-4 w-4" />
+              Ajustar Margen de Ganancia para Consumidor Final (%):
+            </Label>
+            <div className="flex items-center space-x-2 mt-1">
+              <Input
+                id="margen-final"
+                type="number"
+                value={margenFinal}
+                min={0}
+                max={500}
+                onChange={handleMargenChange}
+                className="w-28 text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <Percent className="h-5 w-5 text-muted-foreground" />
+            </div>
+             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+              Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará en el Catálogo Público y "Mi Catálogo (Vendedora)".
+            </p>
+          </Card>
+
+          <Alert className="mb-6 bg-green-50 border-green-200 text-green-700">
+            <DollarSign className="h-5 w-5 text-green-600" />
+            <AlertTitle className="font-semibold text-green-800">Precios Calculados</AlertTitle>
+            <AlertDescription>
+              Visualiza cómo quedan los precios finales con el margen aplicado. Puedes usar esta tabla para imprimir o compartir.
+            </AlertDescription>
+          </Alert>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">ID</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead className="text-right">Precio Base</TableHead>
+                  <TableHead className="text-right">Precio Final (con {margenFinal}%)</TableHead>
+                  <TableHead>Categoría</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.length > 0 ? (
+                  products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>{product.id}</TableCell>
+                      <TableCell className="font-medium">{product.name}</TableCell>
+                      <TableCell className="text-right">
+                        ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-primary">
+                        ${(product.price * (1 + margenFinal / 100)).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>{product.category}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center h-24">
+                      No hay productos para mostrar. Intenta agregar algunos en "Costos Privados".
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
+    
