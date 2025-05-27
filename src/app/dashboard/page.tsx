@@ -5,7 +5,8 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart, Settings, ShoppingBag } from 'lucide-react';
+import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardHomePage() {
   const [user, setUser] = useState<User | null>(null);
