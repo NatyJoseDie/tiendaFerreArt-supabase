@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
 import { BarChart2, DollarSign, CalendarDays, PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils'; // Added missing import
 
 const saleFormSchema = z.object({
   productId: z.string().min(1, { message: 'Debe seleccionar un producto.' }),
@@ -55,9 +56,10 @@ export default function VentasPage() {
     const prods = getAllProducts();
     setProductsList(prods);
     if (prods.length > 0) {
-      form.setValue('productId', prods[0].id);
-      setSelectedProductCost(prods[0].price);
-      form.setValue('salePrice', prods[0].price); // Default sale price to cost price
+      const defaultProduct = prods[0];
+      form.setValue('productId', defaultProduct.id.toString()); // Ensure productId is a string
+      setSelectedProductCost(defaultProduct.price);
+      form.setValue('salePrice', defaultProduct.price); 
     }
   }, [form]);
 
@@ -70,16 +72,21 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        // Optionally, uncomment to reset salePrice when product changes
-        // if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost) {
-        //   form.setValue('salePrice', product.price);
-        // }
+        // If salePrice hasn't been manually set or is still the cost of the *previous* product, update it.
+        // This avoids resetting manual entries but helps if user just clicks products.
+        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost) {
+           // form.setValue('salePrice', product.price); // Commented out: user might want to keep their entered price
+        }
       }
     }
-  }, [watchedProductId, productsList, form]);
+  }, [watchedProductId, productsList, form, selectedProductCost]); // Added selectedProductCost to dependency array
 
   useEffect(() => {
-    const gain = (watchedSalePrice - selectedProductCost) * watchedQuantity;
+    const quantity = Number(watchedQuantity) || 0;
+    const salePrice = Number(watchedSalePrice) || 0;
+    const cost = Number(selectedProductCost) || 0;
+    
+    const gain = (salePrice - cost) * quantity;
     setCalculatedGain(isNaN(gain) ? 0 : gain);
   }, [watchedSalePrice, selectedProductCost, watchedQuantity]);
 
@@ -93,7 +100,7 @@ export default function VentasPage() {
 
     const newSale: RegisteredSale = {
       ...data,
-      id: Date.now().toString(), // Simple ID for demo
+      id: Date.now().toString(), 
       productName: product.name,
       costPrice: product.price,
       totalGain: (data.salePrice - product.price) * data.quantity,
@@ -101,13 +108,15 @@ export default function VentasPage() {
 
     setSales(prevSales => [...prevSales, newSale]);
     toast({ title: "Venta Registrada", description: `${product.name} (x${data.quantity}) registrada.` });
+    
+    const defaultProductForReset = productsList.length > 0 ? productsList[0] : null;
     form.reset({
-      productId: productsList.length > 0 ? productsList[0].id : '',
+      productId: defaultProductForReset ? defaultProductForReset.id.toString() : '',
       quantity: 1,
-      salePrice: productsList.length > 0 ? productsList[0].price : 0,
+      salePrice: defaultProductForReset ? defaultProductForReset.price : 0,
       saleDate: new Date().toISOString().split('T')[0],
     });
-    if (productsList.length > 0) setSelectedProductCost(productsList[0].price);
+    if (defaultProductForReset) setSelectedProductCost(defaultProductForReset.price);
     setCalculatedGain(0);
   };
 
@@ -134,7 +143,18 @@ export default function VentasPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Producto</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          const selectedProd = productsList.find(p => p.id === value);
+                          if (selectedProd) {
+                            form.setValue('salePrice', selectedProd.price); // Set salePrice to cost when product changes
+                            setSelectedProductCost(selectedProd.price);
+                          }
+                        }} 
+                        value={field.value}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar producto" />
@@ -238,7 +258,7 @@ export default function VentasPage() {
                       <TableCell className="text-right">{sale.quantity}</TableCell>
                       <TableCell className="text-right">${sale.costPrice.toFixed(2)}</TableCell>
                       <TableCell className="text-right">${sale.salePrice.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-semibold ${sale.totalGain >= 0 ? 'text-green-600' : 'text-red-600'}">
+                      <TableCell className={cn("text-right font-semibold", sale.totalGain >= 0 ? 'text-green-600' : 'text-red-600')}>
                         ${sale.totalGain.toFixed(2)}
                       </TableCell>
                     </TableRow>
@@ -252,4 +272,3 @@ export default function VentasPage() {
     </div>
   );
 }
-
