@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent, useMemo, Fragment } from "react";
 import { getAllProducts } from "@/data/mock-products";
 import type { Product } from "@/lib/types";
 import { PageHeader } from '@/components/shared/page-header';
@@ -23,14 +23,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableCaption,
 } from "@/components/ui/table";
-import { Trash2, Edit3, PlusCircle } from "lucide-react";
+import { Trash2, Edit3, PlusCircle, ListFilter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
-const productCategories = Array.from(
-  new Set(getAllProducts().map(p => p.category).filter(cat => cat && cat.trim() !== ""))
-).sort();
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
 const LOW_STOCK_THRESHOLD = 5;
@@ -40,34 +38,47 @@ export default function ListaCostosPage() {
   const [form, setForm] = useState<{ name: string; price: string; category: string; stock: string }>({ name: "", price: "", category: "", stock: "5" });
   const [editId, setEditId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
     const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
+    let loadedProducts: Product[];
     if (storedProducts) {
       try {
-        setProductos(JSON.parse(storedProducts));
+        loadedProducts = JSON.parse(storedProducts);
       } catch (error) {
         console.error("Error parsing masterProductList from localStorage", error);
-        setProductos(getAllProducts()); 
+        loadedProducts = getAllProducts(); 
       }
     } else {
-      setProductos(getAllProducts());
+      loadedProducts = getAllProducts();
     }
+    setProductos(loadedProducts);
+    const categories = Array.from(
+      new Set(loadedProducts.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
+    ).sort();
+    setProductCategories(categories);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
     if (!isLoading && productos.length > 0) {
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
+        // Update categories if products change after initial load (e.g. new category added)
+        const categories = Array.from(
+          new Set(productos.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
+        ).sort();
+        setProductCategories(categories);
     } else if (!isLoading && productos.length === 0) {
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify([]));
+        setProductCategories([]);
     }
   }, [productos, isLoading]);
 
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -107,8 +118,8 @@ export default function ListaCostosPage() {
         price: priceAsNumber,
         category: form.category,
         stock: stockAsNumber,
-        description: `Descripción de ${form.name}`,
-        images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(form.name)}`],
+        description: `Descripción de ${form.name}`, // Default description
+        images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(form.name)}`], // Default image
       };
       setProductos(prev => [...prev, newProduct]);
       toast({ title: "Éxito", description: "Producto agregado." });
@@ -119,6 +130,11 @@ export default function ListaCostosPage() {
   const handleEdit = (producto: Product) => {
     setForm({ name: producto.name, price: producto.price.toString(), category: producto.category, stock: producto.stock.toString() });
     setEditId(producto.id);
+     // Scroll to form for better UX on mobile when editing
+    const formElement = document.getElementById('product-form-card');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -135,14 +151,34 @@ export default function ListaCostosPage() {
     setForm({ name: "", price: "", category: "", stock: "5" });
   };
 
+  const filteredAndGroupedProducts = useMemo(() => {
+    let filtered = productos;
+    if (categoryFilter !== "all") {
+      filtered = productos.filter(p => p.category === categoryFilter);
+    }
+
+    if (categoryFilter === "all" || filtered.length > 0) {
+      return filtered.reduce((acc, product) => {
+        const category = product.category || "Sin Categoría";
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(product);
+        return acc;
+      }, {} as Record<string, Product[]>);
+    }
+    return {};
+  }, [productos, categoryFilter]);
+
+
   if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
           title="Lista de Costos Privados"
-          description="Cargando productos..."
+          description="Cargando productos y costos..."
         />
-        <Card><CardContent className="p-6"><div className="animate-pulse h-64 bg-muted rounded-md"></div></CardContent></Card>
+        <Card id="product-form-card"><CardContent className="p-6"><div className="animate-pulse h-64 bg-muted rounded-md"></div></CardContent></Card>
         <Card><CardContent className="p-6"><div className="animate-pulse h-96 bg-muted rounded-md"></div></CardContent></Card>
       </div>
     );
@@ -154,7 +190,7 @@ export default function ListaCostosPage() {
         title="Lista de Costos Privados (Lista Madre)"
         description="Gestiona los costos y stock de tus productos. Los cambios aquí afectarán otras secciones."
       />
-      <Card className="shadow-lg">
+      <Card id="product-form-card" className="shadow-lg">
         <CardHeader>
           <CardTitle>{editId ? "Editar Producto" : "Agregar Nuevo Producto"}</CardTitle>
         </CardHeader>
@@ -232,7 +268,23 @@ export default function ListaCostosPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Listado de Productos y Costos</CardTitle>
-          <CardDescription>Visualiza y administra los productos. Actualmente hay {productos.length} productos.</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
+            <CardDescription>Visualiza y administra los productos. Actualmente hay {productos.length} productos.</CardDescription>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <ListFilter className="h-5 w-5 text-muted-foreground" />
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filtrar por categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Categorías</SelectItem>
+                  {productCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -248,44 +300,62 @@ export default function ListaCostosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {productos.length > 0 ? (
-                  productos.map((producto) => (
-                    <TableRow 
-                      key={producto.id}
-                      className={cn(
-                        producto.stock === 0 && "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40",
-                        producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40"
-                      )}
-                    >
-                      <TableCell>{producto.id}</TableCell>
-                      <TableCell className="font-medium">{producto.name}</TableCell>
-                      <TableCell className="text-right">${producto.price.toLocaleString("es-AR")}</TableCell>
-                      <TableCell 
-                        className={cn(
-                          "text-right font-semibold",
-                          producto.stock === 0 && "text-red-600 dark:text-red-400",
-                          producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "text-yellow-700 dark:text-yellow-400"
-                        )}
-                      >
-                        {producto.stock}
-                        {producto.stock === 0 && " (Sin Stock)"}
-                        {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && " (Bajo Stock)"}
-                      </TableCell>
-                      <TableCell>{producto.category}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1">
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(producto.id)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                {Object.keys(filteredAndGroupedProducts).length > 0 ? (
+                  Object.entries(filteredAndGroupedProducts).map(([category, productsInCategory]) => (
+                    <Fragment key={category}>
+                      {categoryFilter === "all" && productsInCategory.length > 0 && ( // Show group header only if "All Categories" or if specific category matches
+                         <TableRow className="bg-muted/50 hover:bg-muted/50">
+                           <TableCell colSpan={6} className="font-semibold text-primary text-lg py-3">
+                             {category}
+                           </TableCell>
+                         </TableRow>
+                       )}
+                       {categoryFilter !== "all" && productsInCategory.length > 0 && (
+                         <TableRow className="bg-muted/50 hover:bg-muted/50">
+                           <TableCell colSpan={6} className="font-semibold text-primary text-lg py-3">
+                             {category}
+                           </TableCell>
+                         </TableRow>
+                       )}
+                      {productsInCategory.map((producto) => (
+                        <TableRow 
+                          key={producto.id}
+                          className={cn(
+                            producto.stock === 0 && "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40",
+                            producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40"
+                          )}
+                        >
+                          <TableCell>{producto.id}</TableCell>
+                          <TableCell className="font-medium">{producto.name}</TableCell>
+                          <TableCell className="text-right">${producto.price.toLocaleString("es-AR")}</TableCell>
+                          <TableCell 
+                            className={cn(
+                              "text-right font-semibold",
+                              producto.stock === 0 && "text-red-600 dark:text-red-400",
+                              producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "text-yellow-700 dark:text-yellow-400"
+                            )}
+                          >
+                            {producto.stock}
+                            {producto.stock === 0 && " (Sin Stock)"}
+                            {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && " (Bajo Stock)"}
+                          </TableCell>
+                          <TableCell>{producto.category}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1">
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(producto.id)} className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </Fragment>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center h-24">
-                      No hay productos para mostrar.
+                      {categoryFilter !== "all" ? `No hay productos en la categoría "${categoryFilter}".` : "No hay productos para mostrar."}
                     </TableCell>
                   </TableRow>
                 )}
