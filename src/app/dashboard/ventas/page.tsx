@@ -9,13 +9,13 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Asegúrate de que Label esté importado
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
-import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard } from 'lucide-react';
+import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const saleFormSchema = z.object({
@@ -67,13 +67,8 @@ export default function VentasPage() {
   useEffect(() => {
     const prods = getAllProducts();
     setProductsList(prods);
-    if (prods.length > 0) {
-      // Intentionally not setting default product or price to allow user selection first
-      // If you want to auto-select the first product, uncomment the lines below:
-      // const defaultProduct = prods[0];
-      // form.setValue('productId', defaultProduct.id.toString());
-      // setSelectedProductCost(defaultProduct.price);
-      // form.setValue('salePrice', defaultProduct.price);
+    if (prods.length > 0 && !form.getValues('productId')) {
+      // No pre-seleccionar para que el usuario elija
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
@@ -87,19 +82,14 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        // Update sale price only if it's 0 or still reflecting old product's cost, and cost actually changed
-        if (form.getValues('salePrice') === 0 || (form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) ) {
+        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) {
            form.setValue('salePrice', product.price); 
         }
       } else {
         setSelectedProductCost(0); 
-        if (form.getValues('salePrice') !== 0) { // Reset sale price if product becomes invalid
-            // form.setValue('salePrice', 0); // Option: reset sale price if product is deselected or invalid
-        }
       }
     } else {
         setSelectedProductCost(0); 
-        // form.setValue('salePrice', 0); // Option: reset sale price if no product selected
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedProductId, productsList]); 
@@ -173,7 +163,6 @@ export default function VentasPage() {
                           field.onChange(value);
                           const selectedProd = productsList.find(p => p.id === value);
                           if (selectedProd) {
-                            // form.setValue('salePrice', selectedProd.price); // Keep user's price if they changed it
                             setSelectedProductCost(selectedProd.price);
                           } else {
                             setSelectedProductCost(0);
@@ -278,7 +267,7 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem> {/* Removed lg:col-span-2 */}
+                 <FormItem>
                   <FormLabel>Ganancia Total Calculada</FormLabel>
                   <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted text-lg")} />
                 </FormItem>
@@ -292,15 +281,30 @@ export default function VentasPage() {
         </CardContent>
       </Card>
 
-      {sales.length > 0 && (
-        <Card className="mt-8 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart2 className="mr-2 h-5 w-5 text-primary" />
-              Ventas Registradas ({sales.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card className="mt-8 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart2 className="mr-2 h-5 w-5 text-primary" />
+            Ventas Registradas ({sales.length})
+          </CardTitle>
+           <CardDescription>
+            Aquí puedes ver las ventas que has registrado. Las opciones de importación y exportación aparecerán debajo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 flex flex-wrap gap-3">
+            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar Excel pendiente.' })}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar PDF pendiente.' })}>
+              <FileText className="mr-2 h-4 w-4" /> Descargar PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para importar desde Excel pendiente.' })}>
+              <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
+            </Button>
+          </div>
+
+          {sales.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -318,7 +322,7 @@ export default function VentasPage() {
                 <TableBody>
                   {sales.map((sale) => (
                     <TableRow key={sale.id}>
-                      <TableCell>{new Date(sale.saleDate + 'T00:00:00').toLocaleDateString()}</TableCell> {/* Ensure date is parsed as local */}
+                      <TableCell>{new Date(sale.saleDate + 'T00:00:00').toLocaleDateString()}</TableCell>
                       <TableCell className="font-medium">{sale.productName}</TableCell>
                       <TableCell>{sale.buyerName}</TableCell>
                       <TableCell>{paymentMethods.find(pm => pm.value === sale.paymentMethod)?.label || sale.paymentMethod}</TableCell>
@@ -333,10 +337,11 @@ export default function VentasPage() {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+             <p className="text-center text-muted-foreground py-4">No hay ventas registradas todavía.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
