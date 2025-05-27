@@ -3,6 +3,7 @@ import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { TopBar } from '@/components/layout/TopBar';
 import { Toaster } from "@/components/ui/toaster"
 
 const geistSans = Geist({
@@ -16,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ShopVision - Your E-commerce Solution',
-  description: 'Discover amazing products and generate compelling descriptions with AI.',
+  title: 'AB Mayorista - Tu Tienda Online',
+  description: 'Descubre productos increíbles y novedades todas las semanas.',
 };
 
 export default function RootLayout({
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+        <TopBar />
         <Header />
         <main className="flex-grow container py-8">
           {children}
