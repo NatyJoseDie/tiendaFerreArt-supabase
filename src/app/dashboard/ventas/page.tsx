@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Asegúrate que Label está importado
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -48,11 +48,16 @@ const paymentMethods = [
   { value: 'mercado_pago', label: 'Mercado Pago' },
 ];
 
+const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
+const DEFAULT_FINAL_CONSUMER_MARGIN = 45; // 45%
+
 export default function VentasPage() {
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [sales, setSales] = useState<RegisteredSale[]>([]);
   const [selectedProductCost, setSelectedProductCost] = useState<number>(0);
   const [calculatedGain, setCalculatedGain] = useState<number>(0);
+  const [finalConsumerMargin, setFinalConsumerMargin] = useState<number>(DEFAULT_FINAL_CONSUMER_MARGIN);
+
 
   const { toast } = useToast();
 
@@ -62,7 +67,7 @@ export default function VentasPage() {
       productId: '',
       quantity: 1,
       salePrice: 0,
-      saleDate: new Date().toISOString().split('T')[0],
+      saleDate: new Date().toISOString().split('T')[0], // Default to today
       buyerName: '',
       paymentMethod: '',
       notes: '',
@@ -71,36 +76,64 @@ export default function VentasPage() {
   });
 
   useEffect(() => {
-    const prods = getAllProducts();
-    setProductsList(prods);
-    if (prods.length > 0 && !form.getValues('productId')) {
-      // No pre-seleccionar para que el usuario elija
+    // Load products from localStorage if available, otherwise from mock
+    const masterProductList = localStorage.getItem('masterProductList');
+    let productData;
+    if (masterProductList) {
+      try {
+        productData = JSON.parse(masterProductList);
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        productData = getAllProducts();
+      }
+    } else {
+      productData = getAllProducts();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+    setProductsList(productData);
+
+    // Load saved sales from localStorage
+    const savedSales = localStorage.getItem('shopvision_sales');
+    if (savedSales) {
+      setSales(JSON.parse(savedSales));
+    }
+
+    // Load final consumer margin
+    const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
+    if (storedMargin) {
+      const parsedMargin = parseFloat(storedMargin);
+      if (!isNaN(parsedMargin)) {
+        setFinalConsumerMargin(parsedMargin);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save sales to localStorage whenever they change
+    localStorage.setItem('shopvision_sales', JSON.stringify(sales));
+  }, [sales]);
 
   const watchedProductId = form.watch('productId');
   const watchedQuantity = form.watch('quantity');
   const watchedSalePrice = form.watch('salePrice');
 
   useEffect(() => {
-    if (watchedProductId) {
+    if (watchedProductId && productsList.length > 0) {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        const currentSalePrice = form.getValues('salePrice');
-        if (currentSalePrice === 0 || (selectedProductCost !== product.price && currentSalePrice === selectedProductCost)) {
-           form.setValue('salePrice', product.price); 
-        }
+        // Calculate suggested sale price based on cost + final consumer margin
+        const suggestedSalePrice = product.price * (1 + finalConsumerMargin / 100);
+        form.setValue('salePrice', parseFloat(suggestedSalePrice.toFixed(2))); 
       } else {
-        setSelectedProductCost(0); 
+        setSelectedProductCost(0);
+        form.setValue('salePrice', 0);
       }
     } else {
-        setSelectedProductCost(0); 
+      setSelectedProductCost(0);
+      form.setValue('salePrice', 0);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedProductId, productsList]); 
-
+  }, [watchedProductId, productsList, finalConsumerMargin]); // form is not needed here to avoid re-runs
 
   useEffect(() => {
     const quantity = Number(watchedQuantity) || 0;
@@ -123,26 +156,32 @@ export default function VentasPage() {
       ...data,
       id: Date.now().toString(), 
       productName: product.name,
-      costPrice: product.price,
+      costPrice: product.price, // This is your cost
       totalGain: (data.salePrice - product.price) * data.quantity,
-      hasInvoice: data.hasInvoice,
     };
 
-    setSales(prevSales => [...prevSales, newSale]);
+    setSales(prevSales => [newSale, ...prevSales]); // Add to the beginning of the array
     toast({ title: "Venta Registrada", description: `${product.name} (x${data.quantity}) registrada para ${data.buyerName}.` });
     
     form.reset({
-      productId: '',
+      productId: '', // Reset product selection or keep it as is? For now, reset.
       quantity: 1,
-      salePrice: 0,
+      salePrice: 0, // This will be auto-filled if productId is re-selected or set
       saleDate: new Date().toISOString().split('T')[0],
       buyerName: '',
       paymentMethod: '',
       notes: '',
       hasInvoice: false,
     });
-    setSelectedProductCost(0);
-    setCalculatedGain(0);
+    setSelectedProductCost(0); // Reset cost
+    setCalculatedGain(0); // Reset gain
+  };
+  
+  const handleExportPlaceholder = (format: string) => {
+    toast({
+      title: "Funcionalidad Pendiente",
+      description: `La exportación a ${format} aún no está implementada.`,
+    });
   };
 
   return (
@@ -152,14 +191,14 @@ export default function VentasPage() {
         description="Registra nuevas ventas y visualiza el historial."
       />
       
-      <div className="flex flex-wrap gap-3">
-        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar Excel pendiente.' })}>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Excel')}>
           <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel
         </Button>
-        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar PDF pendiente.' })}>
+        <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF')}>
           <FileText className="mr-2 h-4 w-4" /> Descargar PDF
         </Button>
-        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para importar desde Excel pendiente.' })}>
+        <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Importar desde Excel')}>
           <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
         </Button>
       </div>
@@ -174,7 +213,7 @@ export default function VentasPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <FormField
                   control={form.control}
                   name="productId"
@@ -184,12 +223,7 @@ export default function VentasPage() {
                       <Select 
                         onValueChange={(value) => {
                           field.onChange(value);
-                          const selectedProd = productsList.find(p => p.id === value);
-                          if (selectedProd) {
-                            setSelectedProductCost(selectedProd.price);
-                          } else {
-                            setSelectedProductCost(0);
-                          }
+                          // Logic to update salePrice based on selected product is in useEffect
                         }} 
                         value={field.value}
                       >
@@ -298,7 +332,7 @@ export default function VentasPage() {
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
+                    <FormItem className="lg:col-span-2"> {/* Makes notes take more space if desired */}
                       <FormLabel className="flex items-center"><StickyNote className="mr-1 h-4 w-4 text-muted-foreground" />Notas Adicionales</FormLabel>
                       <FormControl>
                         <Textarea placeholder="Notas sobre la venta, cliente, etc." {...field} rows={2}/>
@@ -311,7 +345,7 @@ export default function VentasPage() {
                   control={form.control}
                   name="hasInvoice"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 h-fit mt-6">
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 h-fit mt-auto"> {/* Adjusted for alignment */}
                        <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -357,7 +391,7 @@ export default function VentasPage() {
                     <TableHead className="text-right">Cantidad</TableHead>
                     <TableHead className="text-right">Costo Unit.</TableHead>
                     <TableHead className="text-right">Venta Unit.</TableHead>
-                    <TableHead className="text-right">Ganancia</TableHead>
+                    <TableHead className="text-right">Ganancia Total</TableHead>
                     <TableHead>Factura</TableHead>
                     <TableHead>Notas</TableHead>
                   </TableRow>
@@ -376,7 +410,7 @@ export default function VentasPage() {
                         ${sale.totalGain.toFixed(2)}
                       </TableCell>
                       <TableCell>{sale.hasInvoice ? 'Sí' : 'No'}</TableCell>
-                      <TableCell className="text-xs max-w-[150px] truncate">{sale.notes}</TableCell>
+                      <TableCell className="text-xs max-w-[150px] truncate" title={sale.notes}>{sale.notes}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
