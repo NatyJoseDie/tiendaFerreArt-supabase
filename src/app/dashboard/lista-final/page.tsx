@@ -8,9 +8,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { DollarSign, Percent, Edit } from 'lucide-react';
+import { DollarSign, Percent, Edit, FileSpreadsheet, FileText, FileImage } from 'lucide-react';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
 const DEFAULT_MARGIN = 50; // Default margin if not found or invalid
@@ -19,6 +21,7 @@ export default function ListaFinalPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
@@ -56,6 +59,14 @@ export default function ListaFinalPage() {
       setMargenFinal(0); // Set to 0 if input is cleared
     }
   };
+  
+  const handleExportPlaceholder = (format: string) => {
+    toast({
+      title: "Funcionalidad Pendiente",
+      description: `La exportación a ${format} aún no está implementada.`,
+    });
+  };
+
 
   if (isLoading) {
     return (
@@ -124,26 +135,41 @@ export default function ListaFinalPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Card className="mb-8 p-4 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-md shadow">
-            <Label htmlFor="margen-final" className="text-sm font-medium block mb-1 text-blue-700 dark:text-blue-300">
-              <Edit className="inline-block mr-1 h-4 w-4" />
-              Ajustar Margen de Ganancia para Consumidor Final (%):
-            </Label>
-            <div className="flex items-center space-x-2 mt-1">
-              <Input
-                id="margen-final"
-                type="number"
-                value={margenFinal}
-                min={0}
-                max={500}
-                onChange={handleMargenChange}
-                className="w-28 text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <Percent className="h-5 w-5 text-muted-foreground" />
+          <Card className="mb-8 p-6 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-lg shadow">
+            <div className="space-y-3">
+                <div>
+                    <Label htmlFor="margen-final" className="text-sm font-medium block mb-1 text-blue-700 dark:text-blue-300">
+                    <Edit className="inline-block mr-1 h-4 w-4" />
+                    Ajustar Margen de Ganancia para Consumidor Final (%):
+                    </Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                    <Input
+                        id="margen-final"
+                        type="number"
+                        value={margenFinal}
+                        min={0}
+                        max={500}
+                        onChange={handleMargenChange}
+                        className="w-28 text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    <Percent className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                    Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará en el Catálogo Público y "Mi Catálogo (Vendedora)".
+                    </p>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-3">
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Excel (Lista)')}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel (Lista)
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Lista)')}>
+                        <FileText className="mr-2 h-4 w-4" /> Descargar PDF (Lista)
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Catálogo)')}>
+                        <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
+                    </Button>
+                </div>
             </div>
-             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-              Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará en el Catálogo Público y "Mi Catálogo (Vendedora)".
-            </p>
           </Card>
 
           <Alert className="mb-6 bg-green-50 border-green-200 text-green-700">
@@ -195,5 +221,3 @@ export default function ListaFinalPage() {
     </div>
   );
 }
-
-    
