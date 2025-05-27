@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Asegúrate de que Label esté importado
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -82,7 +82,9 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) {
+        // Set salePrice to product.price only if it's currently 0 or if it was matching the old selectedProductCost
+        const currentSalePrice = form.getValues('salePrice');
+        if (currentSalePrice === 0 || (selectedProductCost !== product.price && currentSalePrice === selectedProductCost)) {
            form.setValue('salePrice', product.price); 
         }
       } else {
@@ -141,6 +143,20 @@ export default function VentasPage() {
         title="Gestión de Ventas"
         description="Registra nuevas ventas y visualiza el historial."
       />
+
+      {/* Container for Import/Export Buttons */}
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar Excel pendiente.' })}>
+          <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar PDF pendiente.' })}>
+          <FileText className="mr-2 h-4 w-4" /> Descargar PDF
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para importar desde Excel pendiente.' })}>
+          <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
+        </Button>
+      </div>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -267,7 +283,7 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem>
+                 <FormItem> {/* Removed lg:col-span-2 */}
                   <FormLabel>Ganancia Total Calculada</FormLabel>
                   <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted text-lg")} />
                 </FormItem>
@@ -288,22 +304,10 @@ export default function VentasPage() {
             Ventas Registradas ({sales.length})
           </CardTitle>
            <CardDescription>
-            Aquí puedes ver las ventas que has registrado. Las opciones de importación y exportación aparecerán debajo.
+            Aquí puedes ver las ventas que has registrado.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 flex flex-wrap gap-3">
-            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar Excel pendiente.' })}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar PDF pendiente.' })}>
-              <FileText className="mr-2 h-4 w-4" /> Descargar PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para importar desde Excel pendiente.' })}>
-              <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
-            </Button>
-          </div>
-
           {sales.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
@@ -345,3 +349,4 @@ export default function VentasPage() {
     </div>
   );
 }
+
