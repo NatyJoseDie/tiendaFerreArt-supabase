@@ -15,14 +15,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
-import { BarChart2, DollarSign, CalendarDays, PlusCircle } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Added missing import
+import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const saleFormSchema = z.object({
   productId: z.string().min(1, { message: 'Debe seleccionar un producto.' }),
   quantity: z.coerce.number().min(1, { message: 'La cantidad debe ser al menos 1.' }),
   salePrice: z.coerce.number().min(0, { message: 'El precio de venta no puede ser negativo.' }),
   saleDate: z.string().min(1, { message: 'Debe seleccionar una fecha.' }),
+  buyerName: z.string().min(1, { message: 'El nombre del comprador es requerido.' }).max(100),
+  paymentMethod: z.string().min(1, { message: 'Debe seleccionar un método de pago.' }),
 });
 
 type SaleFormValues = z.infer<typeof saleFormSchema>;
@@ -33,6 +35,14 @@ interface RegisteredSale extends SaleFormValues {
   costPrice: number;
   totalGain: number;
 }
+
+const paymentMethods = [
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'tarjeta_credito', label: 'Tarjeta de Crédito' },
+  { value: 'tarjeta_debito', label: 'Tarjeta de Débito' },
+  { value: 'mercado_pago', label: 'Mercado Pago' },
+];
 
 export default function VentasPage() {
   const [productsList, setProductsList] = useState<Product[]>([]);
@@ -48,7 +58,9 @@ export default function VentasPage() {
       productId: '',
       quantity: 1,
       salePrice: 0,
-      saleDate: new Date().toISOString().split('T')[0], // Default to today
+      saleDate: new Date().toISOString().split('T')[0],
+      buyerName: '',
+      paymentMethod: '',
     },
   });
 
@@ -57,11 +69,11 @@ export default function VentasPage() {
     setProductsList(prods);
     if (prods.length > 0) {
       const defaultProduct = prods[0];
-      form.setValue('productId', defaultProduct.id.toString()); // Ensure productId is a string
-      setSelectedProductCost(defaultProduct.price);
-      form.setValue('salePrice', defaultProduct.price); 
+      // form.setValue('productId', defaultProduct.id.toString()); // Let user select first
+      // setSelectedProductCost(defaultProduct.price);
+      // form.setValue('salePrice', defaultProduct.price); 
     }
-  }, [form]);
+  }, []); // Removed form from dependencies to avoid re-triggering
 
   const watchedProductId = form.watch('productId');
   const watchedQuantity = form.watch('quantity');
@@ -72,14 +84,19 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        // If salePrice hasn't been manually set or is still the cost of the *previous* product, update it.
-        // This avoids resetting manual entries but helps if user just clicks products.
-        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost) {
-           // form.setValue('salePrice', product.price); // Commented out: user might want to keep their entered price
+        // Update sale price only if it's 0 or still reflecting old product's cost
+        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) {
+           form.setValue('salePrice', product.price); 
         }
+      } else {
+        setSelectedProductCost(0); // Reset if product not found
       }
+    } else {
+        setSelectedProductCost(0); // Reset if no product selected
     }
-  }, [watchedProductId, productsList, form, selectedProductCost]); // Added selectedProductCost to dependency array
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedProductId, productsList, form.getValues('salePrice')]); // Watching specific form value
+
 
   useEffect(() => {
     const quantity = Number(watchedQuantity) || 0;
@@ -107,16 +124,17 @@ export default function VentasPage() {
     };
 
     setSales(prevSales => [...prevSales, newSale]);
-    toast({ title: "Venta Registrada", description: `${product.name} (x${data.quantity}) registrada.` });
+    toast({ title: "Venta Registrada", description: `${product.name} (x${data.quantity}) registrada para ${data.buyerName}.` });
     
-    const defaultProductForReset = productsList.length > 0 ? productsList[0] : null;
     form.reset({
-      productId: defaultProductForReset ? defaultProductForReset.id.toString() : '',
+      productId: '',
       quantity: 1,
-      salePrice: defaultProductForReset ? defaultProductForReset.price : 0,
+      salePrice: 0,
       saleDate: new Date().toISOString().split('T')[0],
+      buyerName: '',
+      paymentMethod: '',
     });
-    if (defaultProductForReset) setSelectedProductCost(defaultProductForReset.price);
+    setSelectedProductCost(0);
     setCalculatedGain(0);
   };
 
@@ -124,7 +142,7 @@ export default function VentasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Gestión de Ventas"
-        description="Analiza el rendimiento de tus ventas y gestiona los pedidos."
+        description="Registra nuevas ventas y visualiza el historial."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -148,12 +166,11 @@ export default function VentasPage() {
                           field.onChange(value);
                           const selectedProd = productsList.find(p => p.id === value);
                           if (selectedProd) {
-                            form.setValue('salePrice', selectedProd.price); // Set salePrice to cost when product changes
+                            form.setValue('salePrice', selectedProd.price); 
                             setSelectedProductCost(selectedProd.price);
                           }
                         }} 
                         value={field.value}
-                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -202,12 +219,49 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
+                 <FormField
+                  control={form.control}
+                  name="buyerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><User className="mr-1 h-4 w-4 text-muted-foreground" />Nombre del Comprador</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ej: Juan Pérez" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><CreditCard className="mr-1 h-4 w-4 text-muted-foreground" />Método de Pago</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar método" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {paymentMethods.map(method => (
+                            <SelectItem key={method.value} value={method.value}>
+                              {method.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="saleDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de Venta</FormLabel>
+                      <FormLabel className="flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />Fecha de Venta</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -215,12 +269,12 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem>
+                 <FormItem className="lg:col-span-2"> {/* Span 2 columns on large screens */}
                   <FormLabel>Ganancia Total Calculada</FormLabel>
-                  <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted")} />
+                  <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted text-lg")} />
                 </FormItem>
               </div>
-              <Button type="submit" className="mt-4">
+              <Button type="submit" className="mt-4" size="lg">
                 <DollarSign className="mr-2 h-4 w-4" />
                 Registrar Venta
               </Button>
@@ -234,7 +288,7 @@ export default function VentasPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <BarChart2 className="mr-2 h-5 w-5 text-primary" />
-              Ventas Registradas
+              Ventas Registradas ({sales.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -244,6 +298,8 @@ export default function VentasPage() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Producto</TableHead>
+                    <TableHead>Comprador</TableHead>
+                    <TableHead>Método Pago</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
                     <TableHead className="text-right">Costo Unit.</TableHead>
                     <TableHead className="text-right">Venta Unit.</TableHead>
@@ -253,8 +309,10 @@ export default function VentasPage() {
                 <TableBody>
                   {sales.map((sale) => (
                     <TableRow key={sale.id}>
-                      <TableCell>{new Date(sale.saleDate).toLocaleDateString()}</TableCell>
-                      <TableCell>{sale.productName}</TableCell>
+                      <TableCell>{new Date(sale.saleDate + 'T00:00:00').toLocaleDateString()}</TableCell> {/* Ensure date is parsed as local */}
+                      <TableCell className="font-medium">{sale.productName}</TableCell>
+                      <TableCell>{sale.buyerName}</TableCell>
+                      <TableCell>{paymentMethods.find(pm => pm.value === sale.paymentMethod)?.label || sale.paymentMethod}</TableCell>
                       <TableCell className="text-right">{sale.quantity}</TableCell>
                       <TableCell className="text-right">${sale.costPrice.toFixed(2)}</TableCell>
                       <TableCell className="text-right">${sale.salePrice.toFixed(2)}</TableCell>
@@ -272,3 +330,4 @@ export default function VentasPage() {
     </div>
   );
 }
+
