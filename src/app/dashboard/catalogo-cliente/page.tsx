@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin'; 
 const DEFAULT_CLIENT_MARGIN = 30;
+const WHOLESALE_MARKUP_PERCENTAGE = 20; // Vendedora's markup for wholesale clients
 
 export default function CatalogoClientePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -67,6 +68,10 @@ export default function CatalogoClientePage() {
       title: "Funcionalidad Pendiente",
       description: "La descarga del catálogo PDF para clientes aún no está implementada.",
     });
+  };
+  
+  const getClientPurchasePrice = (baseVendorPrice: number): number => {
+    return baseVendorPrice * (1 + WHOLESALE_MARKUP_PERCENTAGE / 100);
   };
 
   if (isLoading) {
@@ -119,21 +124,21 @@ export default function CatalogoClientePage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi Catálogo (Cliente/Comercio)"
-        description="Explora los productos con tu margen de ganancia aplicado. Puedes descargar este catálogo."
+        description="Explora los productos con tu margen de ganancia para reventa aplicado. Puedes descargar este catálogo."
       />
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Camera className="mr-2 h-5 w-5 text-primary" />
-            Tu Catálogo Personalizado
+            Tu Catálogo Personalizado para Reventa
           </CardTitle>
            <CardDescription>
-            Ajusta tu margen y visualiza los precios finales de los productos.
+            Ajusta tu margen y visualiza los precios finales de venta al público de los productos.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-8 p-4 border rounded-lg bg-muted/30 max-w-md">
-            <Label htmlFor="margen-cliente" className="text-sm font-medium block mb-1">Tu margen de ganancia (%):</Label>
+            <Label htmlFor="margen-cliente" className="text-sm font-medium block mb-1">Tu margen de ganancia para reventa (%):</Label>
             <div className="flex items-center space-x-2">
               <Input
                 id="margen-cliente"
@@ -146,7 +151,7 @@ export default function CatalogoClientePage() {
               />
               <Percent className="h-5 w-5 text-muted-foreground" />
             </div>
-             <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará a los precios base para calcular tus precios de venta.</p>
+             <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará a tus precios de compra para calcular tus precios de venta al público.</p>
           </div>
           
           <div className="mb-8 flex flex-wrap gap-4">
@@ -164,7 +169,8 @@ export default function CatalogoClientePage() {
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
-                const finalPrice = product.price * (1 + margen / 100);
+                const clientPurchasePrice = getClientPurchasePrice(product.price);
+                const clientSellingPrice = clientPurchasePrice * (1 + margen / 100);
                 const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
 
@@ -185,9 +191,12 @@ export default function CatalogoClientePage() {
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <p className="text-lg font-semibold text-primary catalog-price">
-                        ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${clientSellingPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      <p className="text-xs text-muted-foreground catalog-category">{product.category}</p>
+                       <p className="text-xs text-muted-foreground">
+                        Tu costo: ${clientPurchasePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
                     </CardContent>
                   </Card>
                 );
