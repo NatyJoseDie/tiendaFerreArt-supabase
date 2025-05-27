@@ -5,44 +5,85 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { Camera } from 'lucide-react';
+import { Camera, Percent, Edit } from 'lucide-react';
+
+const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
 
 export default function CatalogoVendedoraPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [margenFinal, setMargenFinal] = useState<number>(50); // Default margin 50%
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setProducts(getAllProducts());
+    const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
+    if (storedMargin) {
+      const parsedMargin = parseFloat(storedMargin);
+      if (!isNaN(parsedMargin)) {
+        setMargenFinal(parsedMargin);
+      }
+    }
+
+    const masterProductList = localStorage.getItem('masterProductList');
+    if (masterProductList) {
+      try {
+        setProducts(JSON.parse(masterProductList));
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        setProducts(getAllProducts());
+      }
+    } else {
+      setProducts(getAllProducts());
+    }
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    // Save margin to localStorage whenever it changes
+    localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, margenFinal.toString());
+  }, [margenFinal]);
+
+  const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMargen = parseFloat(e.target.value);
+    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
+      setMargenFinal(newMargen);
+    } else if (e.target.value === "") {
+      setMargenFinal(0);
+    }
+  };
+
   if (isLoading) {
-    // You can add a more sophisticated loading skeleton here
     return (
       <div className="space-y-6">
         <PageHeader
           title="Mi Catálogo (Vendedora)"
-          description="Visualiza y gestiona la presentación de tus productos como vendedora."
+          description="Visualiza y gestiona la presentación de tus productos y el margen de ganancia para el consumidor final."
         />
-        <Card className="shadow-md">
+        <Card className="shadow-md animate-pulse">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Camera className="mr-2 h-5 w-5 text-primary" />
-              Cargando Catálogo Completo...
-            </CardTitle>
+            <div className="h-6 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mt-1"></div>
           </CardHeader>
           <CardContent>
+            <div className="mb-6 max-w-xs">
+              <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+              <div className="flex items-center space-x-2 mt-1">
+                <div className="h-10 w-24 bg-muted rounded"></div>
+                <div className="h-5 w-5 bg-muted rounded-full"></div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, index) => (
-                <Card key={index} className="animate-pulse">
+                <Card key={index}>
                   <div className="w-full h-48 bg-muted rounded-t-lg"></div>
-                  <CardHeader>
-                    <div className="h-6 bg-muted rounded w-3/4"></div>
+                  <CardHeader className="p-4">
+                    <div className="h-5 bg-muted rounded w-3/4"></div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                  <CardContent className="p-4 pt-0">
+                    <div className="h-6 bg-muted rounded w-1/2 mb-2"></div>
                     <div className="h-4 bg-muted rounded w-1/4"></div>
                   </CardContent>
                 </Card>
@@ -57,27 +98,51 @@ export default function CatalogoVendedoraPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mi Catálogo (Vendedora)"
-        description="Visualiza la presentación de tus productos con precios base."
+        title="Mi Catálogo (Precios al Público)"
+        description="Visualiza cómo se ven tus productos con el precio final para el consumidor y ajusta el margen de ganancia."
       />
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Camera className="mr-2 h-5 w-5 text-primary" />
-            Catálogo Completo (Precios Base)
+            Catálogo con Precios de Venta al Público
           </CardTitle>
           <CardDescription>
-            Así se ve el catálogo con los precios de costo/base para tu referencia.
+            Ajusta el margen de ganancia que se aplicará a los precios base para la venta al consumidor final. Este margen también se usará en el Catálogo Público.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <Card className="mb-8 p-4 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-md shadow">
+            <Label htmlFor="margen-final" className="text-sm font-medium block mb-1 text-blue-700 dark:text-blue-300">
+              <Edit className="inline-block mr-1 h-4 w-4" />
+              Ajustar Margen de Ganancia para Consumidor Final (%):
+            </Label>
+            <div className="flex items-center space-x-2 mt-1">
+              <Input
+                id="margen-final"
+                type="number"
+                value={margenFinal}
+                min={0}
+                max={500}
+                onChange={handleMargenChange}
+                className="w-28 text-base border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <Percent className="h-5 w-5 text-muted-foreground" />
+            </div>
+             <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+              Este margen se aplicará a los precios base para calcular los precios de venta al público.
+            </p>
+          </Card>
+          
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
+                const finalPrice = product.price * (1 + margenFinal / 100);
                 const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
-                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
+                const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
+                
                 return (
-                  <Card key={product.id} className="catalog-item overflow-hidden">
+                  <Card key={product.id} className="catalog-item overflow-hidden transition-shadow hover:shadow-md">
                     <div className="relative w-full aspect-square bg-muted">
                       <Image
                         src={imageSrc}
@@ -93,16 +158,21 @@ export default function CatalogoVendedoraPage() {
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <p className="text-lg font-semibold text-primary catalog-price">
-                        ${product.price.toLocaleString("es-AR")}
+                        ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      <p className="text-xs text-muted-foreground catalog-category">{product.category}</p>
+                      {margenFinal > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center">No hay productos para mostrar.</p>
+            <p className="text-muted-foreground text-center py-8">No hay productos para mostrar. Intenta agregar algunos en la sección 'Costos Privados'.</p>
           )}
         </CardContent>
       </Card>
