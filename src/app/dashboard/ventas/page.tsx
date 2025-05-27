@@ -12,10 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
-import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload } from 'lucide-react';
+import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload, StickyNote, FileSignature } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const saleFormSchema = z.object({
@@ -25,6 +27,8 @@ const saleFormSchema = z.object({
   saleDate: z.string().min(1, { message: 'Debe seleccionar una fecha.' }),
   buyerName: z.string().min(1, { message: 'El nombre del comprador es requerido.' }).max(100),
   paymentMethod: z.string().min(1, { message: 'Debe seleccionar un método de pago.' }),
+  notes: z.string().optional(),
+  hasInvoice: z.boolean().optional().default(false),
 });
 
 type SaleFormValues = z.infer<typeof saleFormSchema>;
@@ -61,6 +65,8 @@ export default function VentasPage() {
       saleDate: new Date().toISOString().split('T')[0],
       buyerName: '',
       paymentMethod: '',
+      notes: '',
+      hasInvoice: false,
     },
   });
 
@@ -82,7 +88,6 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        // Set salePrice to product.price only if it's currently 0 or if it was matching the old selectedProductCost
         const currentSalePrice = form.getValues('salePrice');
         if (currentSalePrice === 0 || (selectedProductCost !== product.price && currentSalePrice === selectedProductCost)) {
            form.setValue('salePrice', product.price); 
@@ -120,6 +125,7 @@ export default function VentasPage() {
       productName: product.name,
       costPrice: product.price,
       totalGain: (data.salePrice - product.price) * data.quantity,
+      hasInvoice: data.hasInvoice,
     };
 
     setSales(prevSales => [...prevSales, newSale]);
@@ -132,6 +138,8 @@ export default function VentasPage() {
       saleDate: new Date().toISOString().split('T')[0],
       buyerName: '',
       paymentMethod: '',
+      notes: '',
+      hasInvoice: false,
     });
     setSelectedProductCost(0);
     setCalculatedGain(0);
@@ -143,8 +151,7 @@ export default function VentasPage() {
         title="Gestión de Ventas"
         description="Registra nuevas ventas y visualiza el historial."
       />
-
-      {/* Container for Import/Export Buttons */}
+      
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" size="sm" onClick={() => toast({ title: 'Próximamente', description: 'Funcionalidad para descargar Excel pendiente.' })}>
           <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel
@@ -283,10 +290,40 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem> {/* Removed lg:col-span-2 */}
+                 <FormItem>
                   <FormLabel>Ganancia Total Calculada</FormLabel>
                   <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted text-lg")} />
                 </FormItem>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem className="lg:col-span-2">
+                      <FormLabel className="flex items-center"><StickyNote className="mr-1 h-4 w-4 text-muted-foreground" />Notas Adicionales</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Notas sobre la venta, cliente, etc." {...field} rows={2}/>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="hasInvoice"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 h-fit mt-6">
+                       <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="flex items-center cursor-pointer"><FileSignature className="mr-1 h-4 w-4 text-muted-foreground"/>Factura Emitida</FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
               <Button type="submit" className="mt-4" size="lg">
                 <DollarSign className="mr-2 h-4 w-4" />
@@ -321,6 +358,8 @@ export default function VentasPage() {
                     <TableHead className="text-right">Costo Unit.</TableHead>
                     <TableHead className="text-right">Venta Unit.</TableHead>
                     <TableHead className="text-right">Ganancia</TableHead>
+                    <TableHead>Factura</TableHead>
+                    <TableHead>Notas</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,6 +375,8 @@ export default function VentasPage() {
                       <TableCell className={cn("text-right font-semibold", sale.totalGain >= 0 ? 'text-green-600' : 'text-red-600')}>
                         ${sale.totalGain.toFixed(2)}
                       </TableCell>
+                      <TableCell>{sale.hasInvoice ? 'Sí' : 'No'}</TableCell>
+                      <TableCell className="text-xs max-w-[150px] truncate">{sale.notes}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
