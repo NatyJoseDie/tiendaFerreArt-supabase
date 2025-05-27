@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, type FormEvent, useMemo, Fragment } from "react";
+import { useState, useEffect, type FormEvent, useMemo, Fragment, type ChangeEvent } from "react";
 import { getAllProducts } from "@/data/mock-products";
 import type { Product } from "@/lib/types";
 import { PageHeader } from '@/components/shared/page-header';
@@ -23,19 +23,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableCaption,
 } from "@/components/ui/table";
-import { Trash2, Edit3, PlusCircle, ListFilter } from "lucide-react";
+import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { storage } from '@/lib/firebaseConfig'; // Import storage
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Image from 'next/image';
+
 
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
 const LOW_STOCK_THRESHOLD = 5;
 
+interface FormState {
+  name: string;
+  price: string;
+  category: string;
+  stock: string;
+  imageFile: File | null;
+}
+
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [form, setForm] = useState<{ name: string; price: string; category: string; stock: string }>({ name: "", price: "", category: "", stock: "5" });
+  const [form, setForm] = useState<FormState>({ name: "", price: "", category: "", stock: "5", imageFile: null });
   const [editId, setEditId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [productCategories, setProductCategories] = useState<string[]>([]);
@@ -65,28 +76,32 @@ export default function ListaCostosPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && productos.length > 0) {
+    if (!isLoading) {
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
-        // Update categories if products change after initial load (e.g. new category added)
         const categories = Array.from(
           new Set(productos.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
         ).sort();
         setProductCategories(categories);
-    } else if (!isLoading && productos.length === 0) {
-        localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify([]));
-        setProductCategories([]);
     }
   }, [productos, isLoading]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setForm({ ...form, imageFile: e.target.files[0] });
+    } else {
+      setForm({ ...form, imageFile: null });
+    }
   };
 
   const handleCategoryChange = (value: string) => {
     setForm({ ...form, category: value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.price || !form.category || form.stock === "") {
       toast({ title: "Error", description: "Todos los campos son requeridos, incluyendo el stock.", variant: "destructive" });
@@ -104,9 +119,34 @@ export default function ListaCostosPage() {
         return;
     }
 
+    let imageUrl = editId ? productos.find(p => p.id === editId)?.images[0] || `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}` : `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`;
+
+    if (form.imageFile) {
+      toast({ title: "Subiendo imagen...", description: "Por favor espera." });
+      try {
+        const imageRef = ref(storage, `product_images/${Date.now()}_${form.imageFile.name}`);
+        await uploadBytes(imageRef, form.imageFile);
+        imageUrl = await getDownloadURL(imageRef);
+        toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
+      } catch (error) {
+        console.error("Error uploading image: ", error);
+        toast({ title: "Error de subida", description: "No se pudo subir la imagen.", variant: "destructive" });
+        // Decide if you want to proceed without image or stop
+      }
+    }
+    
+    const productData = {
+      name: form.name,
+      price: priceAsNumber,
+      category: form.category,
+      stock: stockAsNumber,
+      description: `Descripción de ${form.name}`, // Default description or maintain existing if editing
+      images: [imageUrl], // Always an array, store new/updated URL
+    };
+
     if (editId) {
       setProductos(productos.map(p =>
-        p.id === editId ? { ...p, name: form.name, price: priceAsNumber, category: form.category, stock: stockAsNumber } : p
+        p.id === editId ? { ...p, ...productData } : p
       ));
       toast({ title: "Éxito", description: "Producto actualizado." });
       setEditId(null);
@@ -114,23 +154,33 @@ export default function ListaCostosPage() {
       const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id, 10))) + 1).toString() : "1";
       const newProduct: Product = {
         id: newId,
-        name: form.name,
-        price: priceAsNumber,
-        category: form.category,
-        stock: stockAsNumber,
-        description: `Descripción de ${form.name}`, // Default description
-        images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(form.name)}`], // Default image
+        ...productData,
+        // Ensure all Product fields are covered
+        longDescription: productData.description,
+        currency: '$',
+        featured: false,
+        sku: `SKU-${newId}`,
+        brand: 'Marca Ejemplo',
+        tags: [form.category.toLowerCase()]
       };
       setProductos(prev => [...prev, newProduct]);
       toast({ title: "Éxito", description: "Producto agregado." });
     }
-    setForm({ name: "", price: "", category: "", stock: "5" });
+    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
+    // Clear file input visually
+    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
 
   const handleEdit = (producto: Product) => {
-    setForm({ name: producto.name, price: producto.price.toString(), category: producto.category, stock: producto.stock.toString() });
+    setForm({ 
+      name: producto.name, 
+      price: producto.price.toString(), 
+      category: producto.category, 
+      stock: producto.stock.toString(),
+      imageFile: null // Reset file input, user must re-select if they want to change
+    });
     setEditId(producto.id);
-     // Scroll to form for better UX on mobile when editing
     const formElement = document.getElementById('product-form-card');
     if (formElement) {
       formElement.scrollIntoView({ behavior: 'smooth' });
@@ -141,34 +191,35 @@ export default function ListaCostosPage() {
     setProductos(productos.filter(p => p.id !== id));
     if (editId === id) {
       setEditId(null);
-      setForm({ name: "", price: "", category: "", stock: "5" });
+      setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
     }
     toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
   };
 
   const handleCancel = () => {
     setEditId(null);
-    setForm({ name: "", price: "", category: "", stock: "5" });
+    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
+    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
 
-  const filteredAndGroupedProducts = useMemo(() => {
-    let filtered = productos;
-    if (categoryFilter !== "all") {
-      filtered = productos.filter(p => p.category === categoryFilter);
+  const filteredProducts = useMemo(() => {
+    if (categoryFilter === "all") {
+      return productos;
     }
-
-    if (categoryFilter === "all" || filtered.length > 0) {
-      return filtered.reduce((acc, product) => {
-        const category = product.category || "Sin Categoría";
-        if (!acc[category]) {
-          acc[category] = [];
-        }
-        acc[category].push(product);
-        return acc;
-      }, {} as Record<string, Product[]>);
-    }
-    return {};
+    return productos.filter(p => p.category === categoryFilter);
   }, [productos, categoryFilter]);
+
+  const groupedProducts = useMemo(() => {
+    return filteredProducts.reduce((acc, product) => {
+      const category = product.category || "Sin Categoría";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(product);
+      return acc;
+    }, {} as Record<string, Product[]>);
+  }, [filteredProducts]);
 
 
   if (isLoading) {
@@ -178,8 +229,8 @@ export default function ListaCostosPage() {
           title="Lista de Costos Privados"
           description="Cargando productos y costos..."
         />
-        <Card id="product-form-card"><CardContent className="p-6"><div className="animate-pulse h-64 bg-muted rounded-md"></div></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="animate-pulse h-96 bg-muted rounded-md"></div></CardContent></Card>
+        <Card id="product-form-card"><CardContent className="p-6"><Skeleton className="h-96 bg-muted rounded-md"></Skeleton></CardContent></Card>
+        <Card><CardContent className="p-6"><Skeleton className="h-96 bg-muted rounded-md"></Skeleton></CardContent></Card>
       </div>
     );
   }
@@ -188,7 +239,7 @@ export default function ListaCostosPage() {
     <div className="space-y-6">
       <PageHeader
         title="Lista de Costos Privados (Lista Madre)"
-        description="Gestiona los costos y stock de tus productos. Los cambios aquí afectarán otras secciones."
+        description="Gestiona los costos, stock e imágenes de tus productos. Los cambios aquí afectarán otras secciones."
       />
       <Card id="product-form-card" className="shadow-lg">
         <CardHeader>
@@ -196,61 +247,45 @@ export default function ListaCostosPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               <div>
                 <Label htmlFor="name">Nombre del producto</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  name="name"
-                  placeholder="Ej: Termo Stanley"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                />
+                <Input id="name" type="text" name="name" placeholder="Ej: Termo Stanley" value={form.name} onChange={handleInputChange} required />
               </div>
               <div>
                 <Label htmlFor="price">Precio costo ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  name="price"
-                  placeholder="Ej: 15000"
-                  value={form.price}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                />
+                <Input id="price" type="number" name="price" placeholder="Ej: 15000" value={form.price} onChange={handleInputChange} required min="0" step="0.01" />
               </div>
               <div>
                 <Label htmlFor="stock">Stock Disponible</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  name="stock"
-                  placeholder="Ej: 10 (0 para sin stock)"
-                  value={form.stock}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                />
+                <Input id="stock" type="number" name="stock" placeholder="Ej: 10" value={form.stock} onChange={handleInputChange} required min="0" />
               </div>
               <div>
-                <Label htmlFor="category">Categoría</Label>
+                <Label htmlFor="category-form-select">Categoría</Label>
                  <Select name="category" value={form.category} onValueChange={handleCategoryChange} required>
-                  <SelectTrigger id="category">
+                  <SelectTrigger id="category-form-select">
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
                   <SelectContent>
                     {productCategories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
+                     {!productCategories.includes(form.category) && form.category && (
+                        <SelectItem value={form.category} disabled>{form.category} (Nueva)</SelectItem>
+                     )}
                   </SelectContent>
                 </Select>
               </div>
+              <div className="lg:col-span-2">
+                <Label htmlFor="imageFile">Imagen del Producto</Label>
+                <Input id="imageFile" type="file" name="imageFile" accept="image/*" onChange={handleFileChange} />
+                {form.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {form.imageFile.name}</p>}
+                {!form.imageFile && editId && productos.find(p=>p.id === editId)?.images[0] && (
+                     <p className="text-xs mt-1 text-muted-foreground">Imagen actual: <a href={productos.find(p=>p.id === editId)?.images[0]} target="_blank" rel="noopener noreferrer" className="underline">ver imagen</a> (selecciona un nuevo archivo para cambiarla)</p>
+                )}
+              </div>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 pt-2">
               <Button type="submit">
                 {editId ? <Edit3 className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                 {editId ? "Guardar Cambios" : "Agregar Producto"}
@@ -273,13 +308,13 @@ export default function ListaCostosPage() {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <ListFilter className="h-5 w-5 text-muted-foreground" />
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectTrigger className="w-full sm:w-[200px]" id="category-filter-select">
                   <SelectValue placeholder="Filtrar por categoría" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las Categorías</SelectItem>
                   {productCategories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={`filter-${cat}`} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -292,6 +327,7 @@ export default function ListaCostosPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">ID</TableHead>
+                  <TableHead className="w-[100px]">Imagen</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="text-right">Precio Costo</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
@@ -300,20 +336,13 @@ export default function ListaCostosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.keys(filteredAndGroupedProducts).length > 0 ? (
-                  Object.entries(filteredAndGroupedProducts).map(([category, productsInCategory]) => (
+                {Object.keys(groupedProducts).length > 0 ? (
+                  Object.entries(groupedProducts).map(([category, productsInCategory]) => (
                     <Fragment key={category}>
-                      {categoryFilter === "all" && productsInCategory.length > 0 && ( // Show group header only if "All Categories" or if specific category matches
-                         <TableRow className="bg-muted/50 hover:bg-muted/50">
-                           <TableCell colSpan={6} className="font-semibold text-primary text-lg py-3">
-                             {category}
-                           </TableCell>
-                         </TableRow>
-                       )}
-                       {categoryFilter !== "all" && productsInCategory.length > 0 && (
-                         <TableRow className="bg-muted/50 hover:bg-muted/50">
-                           <TableCell colSpan={6} className="font-semibold text-primary text-lg py-3">
-                             {category}
+                      {(categoryFilter === "all" || categoryFilter === category) && productsInCategory.length > 0 && (
+                         <TableRow className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10">
+                           <TableCell colSpan={7} className="font-semibold text-primary text-lg py-3">
+                             {category} ({productsInCategory.length})
                            </TableCell>
                          </TableRow>
                        )}
@@ -326,8 +355,17 @@ export default function ListaCostosPage() {
                           )}
                         >
                           <TableCell>{producto.id}</TableCell>
+                          <TableCell>
+                            {producto.images && producto.images[0] ? (
+                              <Image src={producto.images[0]} alt={producto.name} width={40} height={40} className="rounded object-cover aspect-square" data-ai-hint={producto.category.toLowerCase() + " product"}/>
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{producto.name}</TableCell>
-                          <TableCell className="text-right">${producto.price.toLocaleString("es-AR")}</TableCell>
+                          <TableCell className="text-right">${producto.price.toLocaleString("es-AR", {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
                           <TableCell 
                             className={cn(
                               "text-right font-semibold",
@@ -336,8 +374,8 @@ export default function ListaCostosPage() {
                             )}
                           >
                             {producto.stock}
-                            {producto.stock === 0 && " (Sin Stock)"}
-                            {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && " (Bajo Stock)"}
+                            {producto.stock === 0 && <span className="block text-xs">(Sin Stock)</span>}
+                            {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && <span className="block text-xs">(Bajo Stock)</span>}
                           </TableCell>
                           <TableCell>{producto.category}</TableCell>
                           <TableCell className="text-right">
@@ -354,8 +392,8 @@ export default function ListaCostosPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24">
-                      {categoryFilter !== "all" ? `No hay productos en la categoría "${categoryFilter}".` : "No hay productos para mostrar."}
+                    <TableCell colSpan={7} className="text-center h-24">
+                      {categoryFilter !== "all" ? `No hay productos en la categoría "${categoryFilter}".` : "No hay productos para mostrar. Agrega algunos usando el formulario de arriba."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -367,3 +405,4 @@ export default function ListaCostosPage() {
     </div>
   );
 }
+
