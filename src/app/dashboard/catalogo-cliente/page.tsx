@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Camera, Percent, FileImage, ArrowLeftCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Idealmente, este margen debería guardarse en localStorage asociado al cliente
 const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin'; 
 const DEFAULT_CLIENT_MARGIN = 30;
 
@@ -73,43 +73,41 @@ export default function CatalogoClientePage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Mi Catálogo (Cliente/Comercio)"
-          description="Explora los productos disponibles para ti con tus precios asignados."
+          title={<Skeleton className="h-8 w-3/4" />}
+          description={<Skeleton className="h-5 w-1/2 mt-1" />}
         />
         <Card className="shadow-md">
           <CardHeader>
              <CardTitle className="flex items-center">
                 <Camera className="mr-2 h-5 w-5 text-primary" />
-                Cargando Tu Catálogo Personalizado...
+                <Skeleton className="h-6 w-2/5" />
              </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 max-w-xs">
-              <Label htmlFor="margen-cliente" className="text-sm font-medium">Tu margen de ganancia (%):</Label>
+            <div className="mb-6 p-4 border rounded-lg bg-muted/30 max-w-md">
+              <Skeleton className="h-4 w-1/3 mb-1" />
               <div className="flex items-center space-x-2 mt-1">
-                <Input id="margen-cliente" type="number" value={margen} className="w-24" disabled />
-                <Percent className="h-4 w-4 text-muted-foreground" />
+                <Skeleton className="h-10 w-28 rounded" />
+                <Percent className="h-5 w-5 text-muted-foreground" />
               </div>
+            </div>
+             <div className="mb-8 flex flex-wrap gap-4">
+                <Skeleton className="h-10 w-48 rounded" />
+                <Skeleton className="h-10 w-52 rounded" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, index) => (
                 <Card key={index} className="animate-pulse">
-                  <div className="w-full h-48 bg-muted rounded-t-lg"></div>
-                  <CardHeader>
-                    <div className="h-6 bg-muted rounded w-3/4"></div>
+                  <Skeleton className="w-full aspect-square rounded-t-lg" />
+                  <CardHeader className="p-4">
+                    <Skeleton className="h-5 bg-muted rounded w-3/4" />
                   </CardHeader>
-                  <CardContent>
-                    <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-1/4"></div>
+                  <CardContent className="p-4 pt-0">
+                    <Skeleton className="h-6 bg-muted rounded w-1/2 mb-1" />
+                    <Skeleton className="h-4 bg-muted rounded w-1/4" />
                   </CardContent>
                 </Card>
               ))}
-            </div>
-             <div className="mt-8">
-              <Button variant="outline" disabled>
-                <ArrowLeftCircle className="mr-2 h-4 w-4" />
-                Volver al Portal Cliente
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -151,6 +149,18 @@ export default function CatalogoClientePage() {
              <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará a los precios base para calcular tus precios de venta.</p>
           </div>
           
+          <div className="mb-8 flex flex-wrap gap-4">
+            <Button variant="outline" onClick={handleDownloadCatalog}>
+                <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/vista-cliente">
+                <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                Volver al Portal Cliente
+              </Link>
+            </Button>
+          </div>
+
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
@@ -178,11 +188,6 @@ export default function CatalogoClientePage() {
                         ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-muted-foreground catalog-category">{product.category}</p>
-                      {/* Precio base oculto para el cliente 
-                       <p className="text-xs text-muted-foreground mt-1">
-                        Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p> 
-                      */}
                     </CardContent>
                   </Card>
                 );
@@ -191,17 +196,6 @@ export default function CatalogoClientePage() {
           ) : (
              <p className="text-muted-foreground text-center">No hay productos para mostrar.</p>
           )}
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Button variant="outline" onClick={handleDownloadCatalog}>
-                <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/vista-cliente">
-                <ArrowLeftCircle className="mr-2 h-4 w-4" />
-                Volver al Portal Cliente
-              </Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>

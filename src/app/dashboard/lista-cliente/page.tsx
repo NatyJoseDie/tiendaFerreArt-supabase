@@ -13,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { DollarSign, TrendingUp, ArrowLeftCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin';
 const DEFAULT_CLIENT_MARGIN = 30;
 
 export default function ListaClientePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [margen, setMargen] = useState(DEFAULT_CLIENT_MARGIN); // Default margin 30%
+  const [margen, setMargen] = useState(DEFAULT_CLIENT_MARGIN);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -64,24 +65,27 @@ export default function ListaClientePage() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Mis Precios (Cliente/Comercio)"
-          description="Consulta los precios especiales asignados a tu cuenta y ajusta tu margen de ganancia."
+          title={<Skeleton className="h-8 w-3/4" />}
+          description={<Skeleton className="h-5 w-1/2 mt-1" />}
         />
-        <Card className="animate-pulse">
+        <Card className="shadow-md">
           <CardHeader>
-            <div className="h-6 bg-muted rounded w-3/4"></div>
+            <CardTitle className="flex items-center">
+              <DollarSign className="mr-2 h-5 w-5 text-primary" />
+              <Skeleton className="h-6 w-2/5" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-6 max-w-xs">
-                <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+                <Skeleton className="h-4 w-1/3 mb-1" />
                 <div className="flex items-center space-x-2 mt-1">
-                <div className="h-10 w-24 bg-muted rounded"></div>
+                  <Skeleton className="h-10 w-24 rounded" />
                 </div>
             </div>
-            <div className="h-40 bg-muted rounded"></div> {/* Placeholder for table */}
-            <div className="mt-8">
-                <div className="h-10 w-48 bg-muted rounded"></div> {/* Placeholder for button */}
+             <div className="mb-6">
+              <Skeleton className="h-10 w-48 rounded" /> {/* Placeholder for button */}
             </div>
+            <Skeleton className="h-40 w-full rounded" /> {/* Placeholder for table */}
           </CardContent>
         </Card>
       </div>
@@ -129,6 +133,15 @@ export default function ListaClientePage() {
             </div>
           </div>
 
+          <div className="mb-8">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/vista-cliente">
+                <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                Volver al Portal Cliente
+              </Link>
+            </Button>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -164,14 +177,6 @@ export default function ListaClientePage() {
                 )}
               </TableBody>
             </Table>
-          </div>
-          <div className="mt-8">
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/vista-cliente">
-                <ArrowLeftCircle className="mr-2 h-4 w-4" />
-                Volver al Portal Cliente
-              </Link>
-            </Button>
           </div>
         </CardContent>
       </Card>
