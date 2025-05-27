@@ -1,30 +1,32 @@
 // src/lib/firebaseConfig.ts
 import { initializeApp, getApp, type FirebaseOptions } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-// import { getFirestore } from 'firebase/firestore'; // Descomenta si usarás Firestore
-// import { getAuth } from 'firebase/auth'; // Descomenta si usarás Authentication
+// import { getAuth } from 'firebase/auth'; // Descomentá si usás autenticación
 
+// Configuración de tu proyecto ACTUAL: distriferreart-1003d
 const firebaseConfig: FirebaseOptions = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  // measurementId: "YOUR_MEASUREMENT_ID" // Opcional
+  apiKey: "AIzaSyBAkcStnIRjIkcXRii4WincdDbiqXU",
+  authDomain: "distriferreart-1003d.firebaseapp.com",
+  projectId: "distriferreart-1003d",
+  storageBucket: "distriferreart-1003d.appspot.com",
+  messagingSenderId: "663326517690",
+  appId: "1:663326517690:web:732e095195e90591abd583",
+  measurementId: "G-PJPVPSQYC2"
 };
 
-// Inicializar Firebase
+// Inicializar Firebase solo si no está ya iniciado
 let app;
-// Comprobar si Firebase ya ha sido inicializado para evitar errores de "app/duplicate-app" en HMR
 try {
   app = getApp();
 } catch (e) {
   app = initializeApp(firebaseConfig);
 }
 
+// Inicializar servicios
+const db = getFirestore(app);
 const storage = getStorage(app);
-// const db = getFirestore(app); // Descomenta si usarás Firestore
-// const auth = getAuth(app); // Descomenta si usarás Authentication
+// const auth = getAuth(app); // Descomentá si usás auth
 
-export { app, storage /*, db, auth */ };
+// Exportar todo lo necesario
+export { app, db, storage /*, auth */ };
