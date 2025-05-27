@@ -20,7 +20,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface CartItem {
   product: Product;
   quantity: number;
-  // appliedMargin is no longer needed as price is fixed for commerce
   priceAtAddition: number; // Store the actual price per unit when added
 }
 
@@ -107,6 +106,7 @@ export default function RealizarPedidoPage() {
       });
       return;
     }
+    // In a real app, this would send to a backend
     console.log('Pedido Enviado (simulado):', cartItems.map(item => ({
       productId: item.product.id,
       productName: item.product.name,
@@ -116,11 +116,9 @@ export default function RealizarPedidoPage() {
     })));
     toast({
       title: 'Pedido Enviado (Simulación)',
-      description: `Total: $${cartTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Gracias por tu pedido!`,
+      description: `Total: $${cartTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Gracias por tu pedido! (Esto es una simulación, el pedido no se ha procesado realmente).`,
     });
-    // Aquí iría la lógica para enviar el pedido al backend
-    // Por ahora, solo limpiamos el carrito
-    setCartItems([]);
+    setCartItems([]); // Clear cart after "submission"
   };
   
   if (isLoading) {
@@ -201,9 +199,7 @@ export default function RealizarPedidoPage() {
                         <p className="text-primary font-medium text-sm sm:text-base">
                           ${commercePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          Precio base (costo): ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
+                        {/* Línea de precio base (costo vendedora) eliminada para la vista del cliente */}
                       </div>
                     </div>
                     <Button size="sm" onClick={() => handleAddToCart(product)}>
