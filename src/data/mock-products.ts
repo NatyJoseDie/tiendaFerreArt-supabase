@@ -72,7 +72,7 @@ export const mockProducts: Product[] = userProducts.map((p) => {
     currency: '$',
     category: p.categoria.charAt(0).toUpperCase() + p.categoria.slice(1), // Capitalize category
     images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(p.nombre)}`, `https://placehold.co/600x400.png?text=${encodeURIComponent(p.nombre)}+view2`],
-    stock: Math.floor(Math.random() * 100) + 10, // Random stock between 10 and 110
+    stock: 5, // Default stock set to 5
     featured: p.id % 5 === 0, // Feature roughly every 5th product
     brand: 'Marca Ejemplo',
     sku: generateSku(p.categoria, p.id.toString()),
@@ -90,12 +90,14 @@ mockProducts.forEach(product => {
   product.images = product.images.map(imgUrl => {
     if (imgUrl.startsWith('https://placehold.co/')) {
       const nameKeywords = product.name.toLowerCase().split(' ').slice(0, 2).join(' ');
-      return `${imgUrl}&data-ai-hint=${encodeURIComponent(nameKeywords)}`;
+      // Ensure data-ai-hint is part of the query string correctly
+      if (imgUrl.includes('?')) {
+        return `${imgUrl}&data-ai-hint=${encodeURIComponent(nameKeywords)}`;
+      }
+      return `${imgUrl}?data-ai-hint=${encodeURIComponent(nameKeywords)}`;
     }
     return imgUrl;
   });
-  // Add data-ai-hint to images (the mapping above doesn't allow direct attribute setting)
-  // This will be handled by the component rendering the image
 });
 
 
