@@ -6,24 +6,25 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { ArrowLeftCircle, PlusCircle, ShoppingCart, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StockStatusBadge } from '@/components/products/StockStatusBadge';
 
 interface CartItem {
   product: Product;
   quantity: number;
-  priceAtAddition: number; // Store the actual price per unit when added
+  priceAtAddition: number; 
 }
 
-const COMMERCE_MARGIN_PERCENTAGE = 20; // 20% markup for commerce
+const COMMERCE_MARGIN_PERCENTAGE = 20; 
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+
 
 export default function RealizarPedidoPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -32,7 +33,8 @@ export default function RealizarPedidoPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const masterProductList = localStorage.getItem('masterProductList');
+    setIsLoading(true);
+    const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     let productData;
     if (masterProductList) {
       try {
@@ -53,6 +55,14 @@ export default function RealizarPedidoPage() {
   };
 
   const handleAddToCart = (productToAdd: Product) => {
+    if (productToAdd.stock <= 0) {
+        toast({
+            title: 'Producto sin stock',
+            description: `${productToAdd.name} no está disponible actualmente.`,
+            variant: 'destructive',
+        });
+        return;
+    }
     const commercePrice = getCommercePrice(productToAdd.price);
     setCartItems((prevItems) => {
       const existingItem = prevItems.find(item => item.product.id === productToAdd.id);
@@ -106,19 +116,20 @@ export default function RealizarPedidoPage() {
       });
       return;
     }
-    // In a real app, this would send to a backend
+    
     console.log('Pedido Enviado (simulado):', cartItems.map(item => ({
       productId: item.product.id,
       productName: item.product.name,
       quantity: item.quantity,
       unitPrice: item.priceAtAddition,
-      totalPrice: item.priceAtAddition * item.quantity
+      totalPrice: item.priceAtAddition * item.quantity,
+      stockOriginal: item.product.stock 
     })));
     toast({
       title: 'Pedido Enviado (Simulación)',
       description: `Total: $${cartTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Gracias por tu pedido! (Esto es una simulación, el pedido no se ha procesado realmente).`,
     });
-    setCartItems([]); // Clear cart after "submission"
+    setCartItems([]); 
   };
   
   if (isLoading) {
@@ -174,7 +185,7 @@ export default function RealizarPedidoPage() {
       </Button>
 
       <div className="grid md:grid-cols-3 gap-6 items-start">
-        {/* Product Listing */}
+        
         <div className="md:col-span-2 space-y-4">
           <h2 className="text-xl font-semibold">Productos Disponibles</h2>
           {products.length > 0 ? (
@@ -186,23 +197,25 @@ export default function RealizarPedidoPage() {
                 <Card key={product.id} className="shadow">
                   <CardContent className="flex items-center justify-between p-3 sm:p-4">
                     <div className="flex items-center gap-3 sm:gap-4">
-                      <Image
-                        src={imageSrc}
-                        alt={product.name}
-                        width={64}
-                        height={64}
-                        className="rounded-md border object-cover aspect-square"
-                        data-ai-hint={imageHint}
-                      />
+                      <div className="relative w-16 h-16">
+                        <Image
+                          src={imageSrc}
+                          alt={product.name}
+                          fill
+                          sizes="64px"
+                          className="rounded-md border object-cover aspect-square"
+                          data-ai-hint={imageHint}
+                        />
+                        <StockStatusBadge stock={product.stock} />
+                      </div>
                       <div>
                         <h3 className="font-semibold text-sm sm:text-base">{product.name}</h3>
                         <p className="text-primary font-medium text-sm sm:text-base">
                           ${commercePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
-                        {/* Línea de precio base (costo vendedora) eliminada para la vista del cliente */}
                       </div>
                     </div>
-                    <Button size="sm" onClick={() => handleAddToCart(product)}>
+                    <Button size="sm" onClick={() => handleAddToCart(product)} disabled={product.stock <= 0}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Añadir
                     </Button>
                   </CardContent>
@@ -214,7 +227,7 @@ export default function RealizarPedidoPage() {
           )}
         </div>
 
-        {/* Cart Summary */}
+        
         <div className="md:col-span-1 space-y-4 sticky top-24">
           <h2 className="text-xl font-semibold">Tu Carrito</h2>
           <Card className="shadow-lg">

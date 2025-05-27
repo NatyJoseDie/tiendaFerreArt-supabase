@@ -14,10 +14,13 @@ import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Camera, Percent, FileImage, ArrowLeftCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StockStatusBadge } from '@/components/products/StockStatusBadge';
+
 
 const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin';
-const DEFAULT_CLIENT_MARGIN = 30; // Default margin if not found or invalid
-const WHOLESALE_MARKUP_PERCENTAGE = 20; // Vendedora's markup for wholesale clients
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+const DEFAULT_CLIENT_MARGIN = 30; 
+const WHOLESALE_MARKUP_PERCENTAGE = 20; 
 
 export default function CatalogoClientePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,6 +29,7 @@ export default function CatalogoClientePage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsLoading(true);
     const storedMargin = localStorage.getItem(CLIENT_MARGIN_KEY);
     if (storedMargin) {
       const parsedMargin = parseFloat(storedMargin);
@@ -34,7 +38,7 @@ export default function CatalogoClientePage() {
       }
     }
 
-    const masterProductList = localStorage.getItem('masterProductList');
+    const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     let productData;
     if (masterProductList) {
       try {
@@ -51,8 +55,10 @@ export default function CatalogoClientePage() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(CLIENT_MARGIN_KEY, margen.toString());
-  }, [margen]);
+    if(!isLoading) {
+        localStorage.setItem(CLIENT_MARGIN_KEY, margen.toString());
+    }
+  }, [margen, isLoading]);
 
   const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseInt(e.target.value, 10);
@@ -176,13 +182,14 @@ export default function CatalogoClientePage() {
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
-                const clientPurchasePrice = getClientPurchasePrice(product.price); // Precio al que el cliente TE COMPRA
-                const clientSellingPrice = clientPurchasePrice * (1 + margen / 100); // Precio al que el cliente REVENDE
+                const clientPurchasePrice = getClientPurchasePrice(product.price); 
+                const clientSellingPrice = clientPurchasePrice * (1 + margen / 100); 
                 const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
 
                 return (
-                  <Card key={product.id} className="catalog-item overflow-hidden">
+                  <Card key={product.id} className="catalog-item overflow-hidden relative">
+                     <StockStatusBadge stock={product.stock} />
                      <div className="relative w-full aspect-square bg-muted">
                       <Image
                         src={imageSrc}
@@ -200,7 +207,6 @@ export default function CatalogoClientePage() {
                       <p className="text-lg font-semibold text-primary catalog-price">
                         ${clientSellingPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      {/* Línea de costo de compra del cliente eliminada de la vista del catálogo para reventa */}
                       <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
                     </CardContent>
                   </Card>

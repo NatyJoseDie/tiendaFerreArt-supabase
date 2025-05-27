@@ -32,18 +32,41 @@ const productCategories = Array.from(
   new Set(getAllProducts().map(p => p.category).filter(cat => cat && cat.trim() !== ""))
 ).sort();
 
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [form, setForm] = useState<{ name: string; price: string; category: string }>({ name: "", price: "", category: "" });
+  const [form, setForm] = useState<{ name: string; price: string; category: string; stock: string }>({ name: "", price: "", category: "", stock: "0" });
   const [editId, setEditId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize products from mock data
-    // In a real app, this would be fetched from an API
-    setProductos(getAllProducts());
+    setIsLoading(true);
+    const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
+    if (storedProducts) {
+      try {
+        setProductos(JSON.parse(storedProducts));
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        setProductos(getAllProducts()); // Fallback to mock if parsing fails
+      }
+    } else {
+      setProductos(getAllProducts());
+    }
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    // Save to localStorage whenever productos state changes, if not loading
+    if (!isLoading && productos.length > 0) {
+        localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
+    } else if (!isLoading && productos.length === 0) {
+        // If all products are deleted, ensure localStorage reflects this
+        localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify([]));
+    }
+  }, [productos, isLoading]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -55,43 +78,47 @@ export default function ListaCostosPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.price || !form.category) {
-      toast({ title: "Error", description: "Todos los campos son requeridos.", variant: "destructive" });
+    if (!form.name || !form.price || !form.category || form.stock === "") {
+      toast({ title: "Error", description: "Todos los campos son requeridos, incluyendo el stock.", variant: "destructive" });
       return;
     }
     const priceAsNumber = parseFloat(form.price);
+    const stockAsNumber = parseInt(form.stock, 10);
+
     if (isNaN(priceAsNumber) || priceAsNumber < 0) {
         toast({ title: "Error", description: "El precio debe ser un número válido.", variant: "destructive" });
         return;
     }
-
+    if (isNaN(stockAsNumber) || stockAsNumber < 0) {
+        toast({ title: "Error", description: "El stock debe ser un número entero no negativo.", variant: "destructive" });
+        return;
+    }
 
     if (editId) {
       setProductos(productos.map(p =>
-        p.id === editId ? { ...p, name: form.name, price: priceAsNumber, category: form.category } : p
+        p.id === editId ? { ...p, name: form.name, price: priceAsNumber, category: form.category, stock: stockAsNumber } : p
       ));
       toast({ title: "Éxito", description: "Producto actualizado." });
       setEditId(null);
     } else {
-      // Ensure newId is a string
       const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id, 10))) + 1).toString() : "1";
       const newProduct: Product = {
         id: newId,
         name: form.name,
         price: priceAsNumber,
         category: form.category,
-        description: `Descripción de ${form.name}`, // Default description
-        images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(form.name)}`], // Default image
-        stock: 50, // Default stock
+        stock: stockAsNumber,
+        description: `Descripción de ${form.name}`,
+        images: [`https://placehold.co/600x400.png?text=${encodeURIComponent(form.name)}`],
       };
-      setProductos([...productos, newProduct]);
+      setProductos(prev => [...prev, newProduct]);
       toast({ title: "Éxito", description: "Producto agregado." });
     }
-    setForm({ name: "", price: "", category: "" });
+    setForm({ name: "", price: "", category: "", stock: "0" });
   };
 
   const handleEdit = (producto: Product) => {
-    setForm({ name: producto.name, price: producto.price.toString(), category: producto.category });
+    setForm({ name: producto.name, price: producto.price.toString(), category: producto.category, stock: producto.stock.toString() });
     setEditId(producto.id);
   };
 
@@ -99,21 +126,34 @@ export default function ListaCostosPage() {
     setProductos(productos.filter(p => p.id !== id));
     if (editId === id) {
       setEditId(null);
-      setForm({ name: "", price: "", category: "" });
+      setForm({ name: "", price: "", category: "", stock: "0" });
     }
-    toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista (solo vista).", variant: "destructive" });
+    toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
   };
 
   const handleCancel = () => {
     setEditId(null);
-    setForm({ name: "", price: "", category: "" });
+    setForm({ name: "", price: "", category: "", stock: "0" });
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Lista de Costos Privados"
+          description="Cargando productos..."
+        />
+        <Card><CardContent className="p-6"><div className="animate-pulse h-64 bg-muted rounded-md"></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="animate-pulse h-96 bg-muted rounded-md"></div></CardContent></Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Lista de Costos Privados"
-        description="Gestiona los costos internos de tus productos. Los cambios son solo visuales y no se guardan permanentemente."
+        title="Lista de Costos Privados (Lista Madre)"
+        description="Gestiona los costos y stock de tus productos. Los cambios aquí afectarán otras secciones."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -121,7 +161,7 @@ export default function ListaCostosPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="name">Nombre del producto</Label>
                 <Input
@@ -149,13 +189,25 @@ export default function ListaCostosPage() {
                 />
               </div>
               <div>
+                <Label htmlFor="stock">Stock Disponible</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  name="stock"
+                  placeholder="Ej: 10 (0 para sin stock)"
+                  value={form.stock}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                />
+              </div>
+              <div>
                 <Label htmlFor="category">Categoría</Label>
                  <Select name="category" value={form.category} onValueChange={handleCategoryChange} required>
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* The SelectValue component already handles the placeholder */}
                     {productCategories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
@@ -191,6 +243,7 @@ export default function ListaCostosPage() {
                   <TableHead className="w-[50px]">ID</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead className="text-right">Precio Costo</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead className="text-right w-[150px]">Acciones</TableHead>
                 </TableRow>
@@ -202,6 +255,7 @@ export default function ListaCostosPage() {
                       <TableCell>{producto.id}</TableCell>
                       <TableCell className="font-medium">{producto.name}</TableCell>
                       <TableCell className="text-right">${producto.price.toLocaleString("es-AR")}</TableCell>
+                      <TableCell className="text-right">{producto.stock}</TableCell>
                       <TableCell>{producto.category}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1">
@@ -215,7 +269,7 @@ export default function ListaCostosPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={6} className="text-center h-24">
                       No hay productos para mostrar.
                     </TableCell>
                   </TableRow>

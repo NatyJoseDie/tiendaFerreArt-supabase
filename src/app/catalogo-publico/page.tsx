@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -7,8 +8,10 @@ import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card
+import { StockStatusBadge } from '@/components/products/StockStatusBadge';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
 const DEFAULT_MARGIN = 0; // Default margin if not found in localStorage (0 means show base price)
 
 export default function CatalogoPublicoPage() {
@@ -17,6 +20,7 @@ export default function CatalogoPublicoPage() {
   const [appliedMargin, setAppliedMargin] = useState<number>(DEFAULT_MARGIN);
 
   useEffect(() => {
+    setIsLoading(true);
     const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
     if (storedMargin) {
       const parsedMargin = parseFloat(storedMargin);
@@ -25,7 +29,7 @@ export default function CatalogoPublicoPage() {
       }
     }
 
-    const masterProductList = localStorage.getItem('masterProductList');
+    const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     let productData;
     if (masterProductList) {
       try {
@@ -87,7 +91,8 @@ export default function CatalogoPublicoPage() {
           const displayPrice = p.price * (1 + appliedMargin / 100);
 
           return (
-            <Card className="producto" key={p.id}>
+            <Card className="producto relative" key={p.id}> {/* Added relative positioning */}
+              <StockStatusBadge stock={p.stock} />
               <div className="producto-img">
                 <Image
                   src={imageSrc}

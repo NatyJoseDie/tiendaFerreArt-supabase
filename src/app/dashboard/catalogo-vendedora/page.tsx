@@ -11,9 +11,11 @@ import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Camera, Edit, Percent } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StockStatusBadge } from '@/components/products/StockStatusBadge';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
-const DEFAULT_MARGIN = 45; // Ajustado a 45%
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+const DEFAULT_MARGIN = 45;
 
 export default function CatalogoVendedoraPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,6 +23,7 @@ export default function CatalogoVendedoraPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
     if (storedMargin) {
       const parsedMargin = parseFloat(storedMargin);
@@ -29,7 +32,7 @@ export default function CatalogoVendedoraPage() {
       }
     }
 
-    const masterProductList = localStorage.getItem('masterProductList');
+    const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     let productData;
     if (masterProductList) {
       try {
@@ -45,14 +48,19 @@ export default function CatalogoVendedoraPage() {
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    // Save margin to localStorage whenever it changes, if not loading
+    if(!isLoading) {
+      localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, margenFinal.toString());
+    }
+  }, [margenFinal, isLoading]);
+
   const handleMargenChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseFloat(e.target.value);
     if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
       setMargenFinal(newMargen);
-      localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, newMargen.toString());
     } else if (e.target.value === "") {
       setMargenFinal(0);
-      localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, "0");
     }
   };
 
@@ -100,7 +108,7 @@ export default function CatalogoVendedoraPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi Catálogo (Precios al Público)"
-        description="Visualiza tus productos con el precio final para el consumidor. Ajusta el margen aquí."
+        description="Define tu margen y visualiza tus productos con el precio final para el consumidor. Este margen afectará al Catálogo Público."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -109,7 +117,7 @@ export default function CatalogoVendedoraPage() {
             Catálogo con Precios de Venta al Público
           </CardTitle>
            <CardDescription>
-            Define tu margen de ganancia para el consumidor final. Este margen afectará a este catálogo y al catálogo público.
+            Define tu margen de ganancia para el consumidor final. Este margen afectará a este catálogo y al Catálogo Público. El ajuste se realiza en la sección &quot;Consumidor Final&quot;.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -143,7 +151,8 @@ export default function CatalogoVendedoraPage() {
                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
                 
                 return (
-                  <Card key={product.id} className="catalog-item overflow-hidden transition-shadow hover:shadow-md">
+                  <Card key={product.id} className="catalog-item overflow-hidden transition-shadow hover:shadow-md relative">
+                    <StockStatusBadge stock={product.stock} />
                     <div className="relative w-full aspect-square bg-muted">
                       <Image
                         src={imageSrc}
@@ -161,7 +170,7 @@ export default function CatalogoVendedoraPage() {
                       <p className="text-lg font-semibold text-primary catalog-price">
                         ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      {margenFinal > 0 && ( // Show base price only if a margin is applied
+                      {margenFinal > 0 && ( 
                         <p className="text-xs text-muted-foreground mt-1">
                           Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
