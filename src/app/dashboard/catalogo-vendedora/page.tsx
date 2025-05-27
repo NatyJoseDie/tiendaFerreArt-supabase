@@ -1,22 +1,23 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import Image from 'next/image';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input'; // No se usa pero lo dejo por si acaso en el futuro
-import { Label } from '@/components/ui/label'; // No se usa pero lo dejo
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { Camera, Percent, Edit } from 'lucide-react';
+import { Camera, Edit, Percent } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
-const DEFAULT_MARGIN = 50; // Default margin if not found or invalid
+const DEFAULT_MARGIN = 45; // Ajustado a 45%
 
 export default function CatalogoVendedoraPage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN); // Este margen se lee de localStorage
+  const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -29,44 +30,62 @@ export default function CatalogoVendedoraPage() {
     }
 
     const masterProductList = localStorage.getItem('masterProductList');
+    let productData;
     if (masterProductList) {
       try {
-        setProducts(JSON.parse(masterProductList));
+        productData = JSON.parse(masterProductList);
       } catch (error) {
         console.error("Error parsing masterProductList from localStorage", error);
-        setProducts(getAllProducts());
+        productData = getAllProducts();
       }
     } else {
-      setProducts(getAllProducts());
+      productData = getAllProducts();
     }
+    setProducts(productData);
     setIsLoading(false);
   }, []);
 
-  // No hay handleMargenChange aquí, el margen se define en ListaFinalPage
+  const handleMargenChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const newMargen = parseFloat(e.target.value);
+    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
+      setMargenFinal(newMargen);
+      localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, newMargen.toString());
+    } else if (e.target.value === "") {
+      setMargenFinal(0);
+      localStorage.setItem(FINAL_CONSUMER_MARGIN_KEY, "0");
+    }
+  };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Mi Catálogo (Precios al Público)"
-          description="Visualiza tus productos con el precio final para el consumidor."
+          title={<Skeleton className="h-8 w-3/4" />}
+          description={<Skeleton className="h-5 w-1/2 mt-1" />}
         />
         <Card className="shadow-md animate-pulse">
           <CardHeader>
-            <div className="h-6 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2 mt-1"></div>
+            <div className="h-6 bg-muted rounded w-2/5"></div>
           </CardHeader>
           <CardContent>
+            <div className="mb-6 p-4 border rounded-lg bg-muted/30 max-w-md">
+                <Skeleton className="h-4 w-1/3 mb-1" />
+                <div className="flex items-center space-x-2 mt-1">
+                  <Skeleton className="h-10 w-28 rounded" />
+                  <Percent className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <Skeleton className="h-3 w-full mt-2" />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, index) => (
                 <Card key={index}>
-                  <div className="w-full h-48 bg-muted rounded-t-lg"></div>
+                  <Skeleton className="w-full aspect-square rounded-t-lg" />
                   <CardHeader className="p-4">
-                    <div className="h-5 bg-muted rounded w-3/4"></div>
+                    <Skeleton className="h-5 bg-muted rounded w-3/4" />
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
-                    <div className="h-6 bg-muted rounded w-1/2 mb-2"></div>
-                    <div className="h-4 bg-muted rounded w-1/4"></div>
+                    <Skeleton className="h-6 bg-muted rounded w-1/2 mb-2" />
+                    <Skeleton className="h-4 bg-muted rounded w-1/4" />
                   </CardContent>
                 </Card>
               ))}
@@ -81,7 +100,7 @@ export default function CatalogoVendedoraPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi Catálogo (Precios al Público)"
-        description={`Visualiza cómo se ven tus productos con el precio final para el consumidor (margen actual: ${margenFinal}%). Este margen se ajusta en "Consumidor Final".`}
+        description="Visualiza tus productos con el precio final para el consumidor. Ajusta el margen aquí."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -89,11 +108,33 @@ export default function CatalogoVendedoraPage() {
             <Camera className="mr-2 h-5 w-5 text-primary" />
             Catálogo con Precios de Venta al Público
           </CardTitle>
-          <CardDescription>
-            Los precios mostrados incluyen el margen de ganancia del {margenFinal}% definido en la sección "Consumidor Final".
+           <CardDescription>
+            Define tu margen de ganancia para el consumidor final. Este margen afectará a este catálogo y al catálogo público.
           </CardDescription>
         </CardHeader>
         <CardContent>
+           <div className="mb-6 p-4 border rounded-lg bg-muted/30 max-w-md">
+            <Label htmlFor="margen-final-catalogo" className="text-sm font-medium block mb-1">
+              <Edit className="inline-block mr-1 h-4 w-4" />
+              Tu margen de ganancia para Consumidor Final (%):
+            </Label>
+            <div className="flex items-center space-x-2 mt-1">
+              <Input
+                id="margen-final-catalogo"
+                type="number"
+                value={margenFinal}
+                min={0}
+                max={500}
+                onChange={handleMargenChange}
+                className="w-28 text-base"
+              />
+              <Percent className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará aquí y en el Catálogo Público.
+            </p>
+          </div>
+
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
@@ -120,7 +161,7 @@ export default function CatalogoVendedoraPage() {
                       <p className="text-lg font-semibold text-primary catalog-price">
                         ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      {margenFinal > 0 && (
+                      {margenFinal > 0 && ( // Show base price only if a margin is applied
                         <p className="text-xs text-muted-foreground mt-1">
                           Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
@@ -139,5 +180,3 @@ export default function CatalogoVendedoraPage() {
     </div>
   );
 }
-
-    

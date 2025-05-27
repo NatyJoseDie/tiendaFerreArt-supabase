@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { DollarSign, Percent, Edit, FileSpreadsheet, FileText, FileImage } from 'lucide-react';
+import { DollarSign, Percent, Edit, FileSpreadsheet, FileText, FileImage, Loader2 } from 'lucide-react';
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
-const DEFAULT_MARGIN = 50; // Default margin if not found or invalid
+const DEFAULT_MARGIN = 45; // Ajustado a 45%
 
 export default function ListaFinalPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,6 +24,7 @@ export default function ListaFinalPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsLoading(true);
     const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
     if (storedMargin) {
       const parsedMargin = parseFloat(storedMargin);
@@ -33,16 +34,18 @@ export default function ListaFinalPage() {
     }
 
     const masterProductList = localStorage.getItem('masterProductList');
+    let productData;
     if (masterProductList) {
       try {
-        setProducts(JSON.parse(masterProductList));
+        productData = JSON.parse(masterProductList);
       } catch (error) {
         console.error("Error parsing masterProductList from localStorage", error);
-        setProducts(getAllProducts());
+        productData = getAllProducts();
       }
     } else {
-      setProducts(getAllProducts());
+      productData = getAllProducts();
     }
+    setProducts(productData);
     setIsLoading(false);
   }, []);
 
@@ -53,10 +56,10 @@ export default function ListaFinalPage() {
 
   const handleMargenChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseFloat(e.target.value);
-    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) { // Max margin 500%
+    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) { 
       setMargenFinal(newMargen);
     } else if (e.target.value === "") {
-      setMargenFinal(0); // Set to 0 if input is cleared
+      setMargenFinal(0); 
     }
   };
   
@@ -75,38 +78,46 @@ export default function ListaFinalPage() {
           title="Lista de Precios para Consumidor Final"
           description="Ajusta el margen de ganancia y consulta los precios finales."
         />
-        <Card className="animate-pulse">
+        <Card className="shadow-lg">
           <CardHeader>
-            <div className="h-6 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2 mt-1"></div>
+            <CardTitle className="flex items-center">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
+              Cargando Precios...
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 max-w-xs">
-              <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+            <div className="mb-8 p-6 border-blue-200 bg-blue-50 dark:bg-blue-900/30 max-w-lg shadow animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
               <div className="flex items-center space-x-2 mt-1">
-                <div className="h-10 w-24 bg-muted rounded"></div>
+                <div className="h-10 w-28 bg-muted rounded"></div>
                 <div className="h-5 w-5 bg-muted rounded-full"></div>
+              </div>
+              <div className="h-3 bg-muted rounded w-full mt-2"></div>
+              <div className="flex flex-wrap gap-2 pt-3 mt-2">
+                <div className="h-9 w-36 bg-muted rounded"></div>
+                <div className="h-9 w-36 bg-muted rounded"></div>
+                <div className="h-9 w-40 bg-muted rounded"></div>
               </div>
             </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
-                    <TableHead><div className="h-4 bg-muted rounded w-full"></div></TableHead>
-                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
-                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-full"></div></TableHead>
-                    <TableHead><div className="h-4 bg-muted rounded w-full"></div></TableHead>
+                    <TableHead className="w-[50px]"><div className="h-4 bg-muted rounded"></div></TableHead>
+                    <TableHead><div className="h-4 bg-muted rounded w-3/4"></div></TableHead>
+                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-1/2"></div></TableHead>
+                    <TableHead className="text-right"><div className="h-4 bg-muted rounded w-1/2"></div></TableHead>
+                    <TableHead><div className="h-4 bg-muted rounded w-1/2"></div></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
-                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
-                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
-                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
-                      <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-3/4"></div></TableCell>
+                      <TableCell className="text-right"><div className="h-4 bg-muted rounded w-1/2"></div></TableCell>
+                      <TableCell className="text-right"><div className="h-4 bg-muted rounded w-1/2"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded w-1/2"></div></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -122,7 +133,7 @@ export default function ListaFinalPage() {
     <div className="space-y-6">
       <PageHeader
         title="Lista de Precios para Consumidor Final"
-        description="Ajusta el margen de ganancia y consulta los precios finales. Este margen también afectará al Catálogo Público."
+        description="Ajusta el margen de ganancia y consulta los precios finales. Este margen también afectará al Catálogo Público y 'Mi Catálogo (Vendedora)'."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -155,17 +166,17 @@ export default function ListaFinalPage() {
                     <Percent className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                    Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará en el Catálogo Público y "Mi Catálogo (Vendedora)".
+                    Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará en el Catálogo Público y "Mi Catálogo (Público)".
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 pt-3">
-                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Excel (Lista)')}>
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Excel (Lista Consumidor Final)')}>
                         <FileSpreadsheet className="mr-2 h-4 w-4" /> Descargar Excel (Lista)
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Lista)')}>
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Lista Consumidor Final)')}>
                         <FileText className="mr-2 h-4 w-4" /> Descargar PDF (Lista)
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Catálogo)')}>
+                    <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF (Catálogo Consumidor Final)')}>
                         <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
                     </Button>
                 </div>
@@ -176,7 +187,7 @@ export default function ListaFinalPage() {
             <DollarSign className="h-5 w-5 text-green-600" />
             <AlertTitle className="font-semibold text-green-800">Precios Calculados</AlertTitle>
             <AlertDescription>
-              Visualiza cómo quedan los precios finales con el margen aplicado. Puedes usar esta tabla para imprimir o compartir.
+              Visualiza cómo quedan los precios finales con el margen aplicado ({margenFinal}%). Puedes usar esta tabla para imprimir o compartir.
             </AlertDescription>
           </Alert>
 
