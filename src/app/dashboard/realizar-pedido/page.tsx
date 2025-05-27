@@ -20,28 +20,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface CartItem {
   product: Product;
   quantity: number;
-  appliedMargin: number; // Store the margin applied at the time of adding to cart
+  // appliedMargin is no longer needed as price is fixed for commerce
+  priceAtAddition: number; // Store the actual price per unit when added
 }
 
-const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin';
-const DEFAULT_CLIENT_MARGIN = 30; // Default margin if not explicitly set by client
+const COMMERCE_MARGIN_PERCENTAGE = 20; // 20% markup for commerce
 
 export default function RealizarPedidoPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [clientMargin, setClientMargin] = useState<number>(DEFAULT_CLIENT_MARGIN);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedMargin = localStorage.getItem(CLIENT_MARGIN_KEY);
-    if (storedMargin) {
-      const parsedMargin = parseFloat(storedMargin);
-      if (!isNaN(parsedMargin)) {
-        setClientMargin(parsedMargin);
-      }
-    }
-
     const masterProductList = localStorage.getItem('masterProductList');
     let productData;
     if (masterProductList) {
@@ -58,11 +49,12 @@ export default function RealizarPedidoPage() {
     setIsLoading(false);
   }, []);
 
-  const getPriceWithMargin = (price: number, margin: number): number => {
-    return price * (1 + margin / 100);
+  const getCommercePrice = (basePrice: number): number => {
+    return basePrice * (1 + COMMERCE_MARGIN_PERCENTAGE / 100);
   };
 
   const handleAddToCart = (productToAdd: Product) => {
+    const commercePrice = getCommercePrice(productToAdd.price);
     setCartItems((prevItems) => {
       const existingItem = prevItems.find(item => item.product.id === productToAdd.id);
       if (existingItem) {
@@ -72,11 +64,11 @@ export default function RealizarPedidoPage() {
             : item
         );
       }
-      return [...prevItems, { product: productToAdd, quantity: 1, appliedMargin: clientMargin }];
+      return [...prevItems, { product: productToAdd, quantity: 1, priceAtAddition: commercePrice }];
     });
     toast({
       title: `${productToAdd.name} añadido al carrito!`,
-      description: `Cantidad: 1 (Puedes ajustar en el carrito)`,
+      description: `Precio unitario: $${commercePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   };
 
@@ -102,8 +94,7 @@ export default function RealizarPedidoPage() {
 
   const cartTotal = useMemo(() => {
     return cartItems.reduce((total, item) => {
-      const priceWithMargin = getPriceWithMargin(item.product.price, item.appliedMargin);
-      return total + priceWithMargin * item.quantity;
+      return total + item.priceAtAddition * item.quantity;
     }, 0);
   }, [cartItems]);
 
@@ -116,7 +107,13 @@ export default function RealizarPedidoPage() {
       });
       return;
     }
-    console.log('Pedido Enviado (simulado):', cartItems);
+    console.log('Pedido Enviado (simulado):', cartItems.map(item => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      quantity: item.quantity,
+      unitPrice: item.priceAtAddition,
+      totalPrice: item.priceAtAddition * item.quantity
+    })));
     toast({
       title: 'Pedido Enviado (Simulación)',
       description: `Total: $${cartTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Gracias por tu pedido!`,
@@ -172,7 +169,7 @@ export default function RealizarPedidoPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Realizar Pedido" description="Selecciona los productos que deseas pedir." />
+      <PageHeader title="Realizar Pedido" description="Selecciona los productos que deseas pedir. Los precios mostrados son tus precios de compra (costo + 20%)." />
       
       <Button variant="outline" asChild className="mb-6">
         <Link href="/dashboard/vista-cliente"><ArrowLeftCircle className="mr-2 h-4 w-4"/>Volver al Portal Cliente</Link>
@@ -184,7 +181,7 @@ export default function RealizarPedidoPage() {
           <h2 className="text-xl font-semibold">Productos Disponibles</h2>
           {products.length > 0 ? (
             products.map(product => {
-              const displayPrice = getPriceWithMargin(product.price, clientMargin);
+              const commercePrice = getCommercePrice(product.price);
               const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/100x100.png?text=No+Img';
               const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
               return (
@@ -202,10 +199,10 @@ export default function RealizarPedidoPage() {
                       <div>
                         <h3 className="font-semibold text-sm sm:text-base">{product.name}</h3>
                         <p className="text-primary font-medium text-sm sm:text-base">
-                          ${displayPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${commercePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          Precio base (costo): ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
@@ -233,13 +230,12 @@ export default function RealizarPedidoPage() {
                 <p className="text-muted-foreground text-center py-4">Tu carrito está vacío.</p>
               ) : (
                 cartItems.map(item => {
-                  const itemPriceWithMargin = getPriceWithMargin(item.product.price, item.appliedMargin);
                   return (
                     <div key={item.product.id} className="flex justify-between items-center border-b pb-2 last:border-b-0 last:pb-0">
                       <div>
                         <p className="font-medium text-sm">{item.product.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          ${itemPriceWithMargin.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u (Margen: {item.appliedMargin}%)
+                          ${item.priceAtAddition.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} c/u
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
