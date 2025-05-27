@@ -2,23 +2,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { DollarSign, TrendingUp } from 'lucide-react';
+import { DollarSign, TrendingUp, ArrowLeftCircle } from 'lucide-react';
+
+const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin';
+const DEFAULT_CLIENT_MARGIN = 30;
 
 export default function ListaClientePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [margen, setMargen] = useState(30); // Default margin 30%
+  const [margen, setMargen] = useState(DEFAULT_CLIENT_MARGIN); // Default margin 30%
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setProducts(getAllProducts());
+    const storedMargin = localStorage.getItem(CLIENT_MARGIN_KEY);
+    if (storedMargin) {
+      const parsedMargin = parseFloat(storedMargin);
+      if (!isNaN(parsedMargin)) {
+        setMargen(parsedMargin);
+      }
+    }
+    
+    const masterProductList = localStorage.getItem('masterProductList');
+    let productData;
+    if (masterProductList) {
+      try {
+        productData = JSON.parse(masterProductList);
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        productData = getAllProducts();
+      }
+    } else {
+      productData = getAllProducts();
+    }
+    setProducts(productData);
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(CLIENT_MARGIN_KEY, margen.toString());
+  }, [margen]);
 
   const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseInt(e.target.value, 10);
@@ -28,6 +59,34 @@ export default function ListaClientePage() {
         setMargen(0);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Mis Precios (Cliente/Comercio)"
+          description="Consulta los precios especiales asignados a tu cuenta y ajusta tu margen de ganancia."
+        />
+        <Card className="animate-pulse">
+          <CardHeader>
+            <div className="h-6 bg-muted rounded w-3/4"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 max-w-xs">
+                <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+                <div className="flex items-center space-x-2 mt-1">
+                <div className="h-10 w-24 bg-muted rounded"></div>
+                </div>
+            </div>
+            <div className="h-40 bg-muted rounded"></div> {/* Placeholder for table */}
+            <div className="mt-8">
+                <div className="h-10 w-48 bg-muted rounded"></div> {/* Placeholder for button */}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -105,6 +164,14 @@ export default function ListaClientePage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-8">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/vista-cliente">
+                <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                Volver al Portal Cliente
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>

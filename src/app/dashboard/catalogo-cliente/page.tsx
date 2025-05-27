@@ -3,35 +3,73 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
-import { Camera, Percent } from 'lucide-react';
+import { Camera, Percent, FileImage, ArrowLeftCircle } from 'lucide-react';
+
+// Idealmente, este margen debería guardarse en localStorage asociado al cliente
+const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin'; 
+const DEFAULT_CLIENT_MARGIN = 30;
 
 export default function CatalogoClientePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [margen, setMargen] = useState(30); // Default margin 30%
+  const [margen, setMargen] = useState(DEFAULT_CLIENT_MARGIN);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    setProducts(getAllProducts());
+    const storedMargin = localStorage.getItem(CLIENT_MARGIN_KEY);
+    if (storedMargin) {
+      const parsedMargin = parseFloat(storedMargin);
+      if (!isNaN(parsedMargin)) {
+        setMargen(parsedMargin);
+      }
+    }
+
+    const masterProductList = localStorage.getItem('masterProductList');
+    let productData;
+    if (masterProductList) {
+      try {
+        productData = JSON.parse(masterProductList);
+      } catch (error) {
+        console.error("Error parsing masterProductList from localStorage", error);
+        productData = getAllProducts();
+      }
+    } else {
+      productData = getAllProducts();
+    }
+    setProducts(productData);
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(CLIENT_MARGIN_KEY, margen.toString());
+  }, [margen]);
   
   const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseInt(e.target.value, 10);
-    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) { // Increased max margin
+    if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
       setMargen(newMargen);
     } else if (e.target.value === "") {
         setMargen(0);
     }
   };
 
+  const handleDownloadCatalog = () => {
+    toast({
+      title: "Funcionalidad Pendiente",
+      description: "La descarga del catálogo PDF para clientes aún no está implementada.",
+    });
+  };
+
   if (isLoading) {
-    // You can add a more sophisticated loading skeleton here
     return (
       <div className="space-y-6">
         <PageHeader
@@ -67,6 +105,12 @@ export default function CatalogoClientePage() {
                 </Card>
               ))}
             </div>
+             <div className="mt-8">
+              <Button variant="outline" disabled>
+                <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                Volver al Portal Cliente
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -77,7 +121,7 @@ export default function CatalogoClientePage() {
     <div className="space-y-6">
       <PageHeader
         title="Mi Catálogo (Cliente/Comercio)"
-        description="Explora los productos con tu margen de ganancia aplicado."
+        description="Explora los productos con tu margen de ganancia aplicado. Puedes descargar este catálogo."
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -134,9 +178,11 @@ export default function CatalogoClientePage() {
                         ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-muted-foreground catalog-category">{product.category}</p>
+                      {/* Precio base oculto para el cliente 
                        <p className="text-xs text-muted-foreground mt-1">
                         Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
+                      </p> 
+                      */}
                     </CardContent>
                   </Card>
                 );
@@ -145,6 +191,17 @@ export default function CatalogoClientePage() {
           ) : (
              <p className="text-muted-foreground text-center">No hay productos para mostrar.</p>
           )}
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Button variant="outline" onClick={handleDownloadCatalog}>
+                <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/vista-cliente">
+                <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                Volver al Portal Cliente
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
