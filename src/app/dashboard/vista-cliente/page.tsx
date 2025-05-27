@@ -13,17 +13,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function VistaClientePage() {
   const { toast } = useToast();
 
-  const handleRealizarPedidoClick = () => {
-    toast({
-      title: 'Funcionalidad Pendiente',
-      description: 'La sección para realizar pedidos aún no está implementada.',
-    });
-  };
+  // Realizar Pedido ahora enlaza a la nueva página
+  // const handleRealizarPedidoClick = () => {
+  //   toast({
+  //     title: 'Funcionalidad Pendiente',
+  //     description: 'La sección para realizar pedidos aún no está implementada.',
+  //   });
+  // };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Portal Cliente (Simulación)"
+        title="Portal Cliente"
         description="Accede a las vistas y funcionalidades como si fueras un cliente/comercio."
       />
 
@@ -48,10 +49,12 @@ export default function VistaClientePage() {
             </Link>
           </Button>
 
-          <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center space-y-2 text-center" onClick={handleRealizarPedidoClick}>
-            <ShoppingCart className="h-8 w-8 mb-2 text-primary" />
-            <span className="font-semibold">Realizar Pedido</span>
-            <span className="text-xs text-muted-foreground">(Funcionalidad futura)</span>
+          <Button asChild variant="outline" className="h-auto py-4 flex flex-col items-center justify-center space-y-2 text-center">
+            <Link href="/dashboard/realizar-pedido">
+              <ShoppingCart className="h-8 w-8 mb-2 text-primary" />
+              <span className="font-semibold">Realizar Pedido</span>
+              <span className="text-xs text-muted-foreground">Arma tu pedido de productos</span>
+            </Link>
           </Button>
         </CardContent>
       </Card>
