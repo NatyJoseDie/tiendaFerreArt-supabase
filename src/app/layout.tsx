@@ -1,6 +1,7 @@
 import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
+import './estilos.css'; // Import custom styles
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { TopBar } from '@/components/layout/TopBar';
