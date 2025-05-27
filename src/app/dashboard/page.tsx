@@ -7,15 +7,17 @@ import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
 import { useEffect, useState } from 'react';
 import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera, TrendingUp, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getAllProducts, type Product } from '@/data/mock-products'; // For fallback
+import { getAllProducts } from '@/data/mock-products'; // For fallback
+import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 // Define a minimal type for the sales data we expect from localStorage
 interface SaleEntry {
   salePrice: number;
   quantity: number;
   // We might need other fields if we were to filter by date for "Ventas del Mes"
-  // saleDate: string; 
+  // saleDate: string;
 }
 
 export default function DashboardHomePage() {
@@ -23,6 +25,7 @@ export default function DashboardHomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeProductsCount, setActiveProductsCount] = useState<number>(0);
   const [totalSalesAmount, setTotalSalesAmount] = useState<number>(0);
+  const router = useRouter(); // Initialize router
 
   useEffect(() => {
     const currentUser = getUserFromLocalStorage();
@@ -36,7 +39,7 @@ export default function DashboardHomePage() {
         setActiveProductsCount(masterProductList.length);
       } else {
         // Fallback if no list in localStorage yet
-        setActiveProductsCount(getAllProducts().length); 
+        setActiveProductsCount(getAllProducts().length);
       }
     } catch (error) {
       console.error("Error loading masterProductList from localStorage:", error);
@@ -66,19 +69,19 @@ export default function DashboardHomePage() {
       console.error("Error loading sales data from localStorage:", error);
       // Keep salesTotal as is or set to 0
     }
-    
+
     setIsLoading(false);
   }, []);
 
   const welcomeMessage = user ? `Bienvenido de nuevo, ${user.username}!` : 'Bienvenido al Dashboard';
-  const roleSpecificMessage = user?.userType === 'vendedora' 
+  const roleSpecificMessage = user?.userType === 'vendedora'
     ? 'Aquí puedes administrar costos, catálogos y ventas.'
     : 'Consulta tus precios y catálogos asignados.';
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader 
+        <PageHeader
           title={<Skeleton className="h-9 w-1/2" />}
           description={<Skeleton className="h-5 w-3/4 mt-1" />}
         />
@@ -136,11 +139,11 @@ export default function DashboardHomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <PageHeader
         title={welcomeMessage}
         description={roleSpecificMessage}
       />
-      
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Resumen Rápido</CardTitle>
@@ -208,5 +211,3 @@ export default function DashboardHomePage() {
     </div>
   );
 }
-
-    
