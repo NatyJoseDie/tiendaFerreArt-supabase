@@ -5,49 +5,56 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera, TrendingUp, List } from 'lucide-react';
+import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera, TrendingUp, List, PackageWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getAllProducts } from '@/data/mock-products'; // For fallback
+import { getAllProducts } from '@/data/mock-products'; 
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
 
-// Define a minimal type for the sales data we expect from localStorage
 interface SaleEntry {
   salePrice: number;
   quantity: number;
-  // We might need other fields if we were to filter by date for "Ventas del Mes"
-  // saleDate: string;
 }
+
+const LOW_STOCK_THRESHOLD_DASHBOARD = 5;
 
 export default function DashboardHomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeProductsCount, setActiveProductsCount] = useState<number>(0);
   const [totalSalesAmount, setTotalSalesAmount] = useState<number>(0);
-  const router = useRouter(); // Initialize router
+  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const router = useRouter(); 
 
   useEffect(() => {
     const currentUser = getUserFromLocalStorage();
     setUser(currentUser);
 
-    // Load product count
+    let productsForCount: Product[] = [];
+    let salesTotal = 0;
+    let productsWithLowStock: Product[] = [];
+
     try {
       const masterProductListString = localStorage.getItem('masterProductList');
       if (masterProductListString) {
         const masterProductList = JSON.parse(masterProductListString) as Product[];
-        setActiveProductsCount(masterProductList.length);
+        productsForCount = masterProductList;
+        productsWithLowStock = masterProductList.filter(p => p.stock <= LOW_STOCK_THRESHOLD_DASHBOARD);
       } else {
-        // Fallback if no list in localStorage yet
-        setActiveProductsCount(getAllProducts().length);
+        productsForCount = getAllProducts();
+        productsWithLowStock = productsForCount.filter(p => p.stock <= LOW_STOCK_THRESHOLD_DASHBOARD);
       }
+      setActiveProductsCount(productsForCount.length);
+      setLowStockProducts(productsWithLowStock);
     } catch (error) {
       console.error("Error loading masterProductList from localStorage:", error);
-      setActiveProductsCount(getAllProducts().length); // Fallback on error
+      const fallbackProducts = getAllProducts();
+      setActiveProductsCount(fallbackProducts.length);
+      setLowStockProducts(fallbackProducts.filter(p => p.stock <= LOW_STOCK_THRESHOLD_DASHBOARD));
     }
 
-    // Load total sales amount
-    let salesTotal = 0;
     try {
       const consumerSalesString = localStorage.getItem('shopvision_sales_consumer_final');
       if (consumerSalesString) {
@@ -67,7 +74,6 @@ export default function DashboardHomePage() {
       setTotalSalesAmount(salesTotal);
     } catch (error) {
       console.error("Error loading sales data from localStorage:", error);
-      // Keep salesTotal as is or set to 0
     }
 
     setIsLoading(false);
@@ -111,10 +117,10 @@ export default function DashboardHomePage() {
                 <Skeleton className="h-4 w-1/2" />
               </CardContent>
             </Card>
-            <Card className="bg-card md:col-span-2 lg:col-span-1">
+             <Card className="bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Notificaciones</CardTitle>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Alertas de Stock</CardTitle>
+                <PackageWarning className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-8 w-1/5 mb-1" />
@@ -172,18 +178,50 @@ export default function DashboardHomePage() {
               <p className="text-xs text-muted-foreground">Productos en tu lista de costos.</p>
             </CardContent>
           </Card>
-          <Card className="bg-card md:col-span-2 lg:col-span-1">
+          <Card className="bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Notificaciones</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Alertas de Stock</CardTitle>
+              <PackageWarning className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div> {/* Placeholder */}
-              <p className="text-xs text-muted-foreground">Nuevas alertas pendientes</p> {/* Placeholder */}
+              {lowStockProducts.length > 0 ? (
+                <>
+                  <div className="text-2xl font-bold text-orange-500">{lowStockProducts.length}</div>
+                  <p className="text-xs text-muted-foreground">Productos con stock bajo o nulo.</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold text-green-600">OK</div>
+                  <p className="text-xs text-muted-foreground">Todo el stock en orden.</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </CardContent>
       </Card>
+
+      {user?.userType === 'vendedora' && lowStockProducts.length > 0 && (
+        <Card className="shadow-md border-orange-500">
+          <CardHeader>
+            <CardTitle className="text-orange-600 flex items-center">
+              <PackageWarning className="mr-2 h-5 w-5" /> Productos con Stock Crítico
+            </CardTitle>
+            <CardDescription>
+              Los siguientes productos tienen stock igual o menor a {LOW_STOCK_THRESHOLD_DASHBOARD} unidades. Considera reponerlos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              {lowStockProducts.map(product => (
+                <li key={product.id}>
+                  {product.name} - <span className="font-semibold">Stock: {product.stock}</span>
+                  {product.stock === 0 && <Badge variant="destructive" className="ml-2">SIN STOCK</Badge>}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
        <Card className="shadow-md">
         <CardHeader>
@@ -204,8 +242,6 @@ export default function DashboardHomePage() {
                 <Button variant="outline" onClick={() => router.push('/dashboard/realizar-pedido')}><ShoppingBag className="mr-2 h-4 w-4" /> Realizar Pedido</Button>
               </>
             )}
-            {/* El botón de configuración general puede quedar como placeholder o eliminarse si no hay config específica */}
-            {/* <Button variant="ghost"><Settings className="mr-2 h-4 w-4" /> Configuración</Button> */}
         </CardContent>
       </Card>
     </div>

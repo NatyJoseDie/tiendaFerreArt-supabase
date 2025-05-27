@@ -26,17 +26,18 @@ import {
 } from "@/components/ui/table";
 import { Trash2, Edit3, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
-// Get unique, non-empty categories from products for the select dropdown
 const productCategories = Array.from(
   new Set(getAllProducts().map(p => p.category).filter(cat => cat && cat.trim() !== ""))
 ).sort();
 
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+const LOW_STOCK_THRESHOLD = 5;
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [form, setForm] = useState<{ name: string; price: string; category: string; stock: string }>({ name: "", price: "", category: "", stock: "0" });
+  const [form, setForm] = useState<{ name: string; price: string; category: string; stock: string }>({ name: "", price: "", category: "", stock: "5" });
   const [editId, setEditId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -49,7 +50,7 @@ export default function ListaCostosPage() {
         setProductos(JSON.parse(storedProducts));
       } catch (error) {
         console.error("Error parsing masterProductList from localStorage", error);
-        setProductos(getAllProducts()); // Fallback to mock if parsing fails
+        setProductos(getAllProducts()); 
       }
     } else {
       setProductos(getAllProducts());
@@ -58,11 +59,9 @@ export default function ListaCostosPage() {
   }, []);
 
   useEffect(() => {
-    // Save to localStorage whenever productos state changes, if not loading
     if (!isLoading && productos.length > 0) {
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
     } else if (!isLoading && productos.length === 0) {
-        // If all products are deleted, ensure localStorage reflects this
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify([]));
     }
   }, [productos, isLoading]);
@@ -114,7 +113,7 @@ export default function ListaCostosPage() {
       setProductos(prev => [...prev, newProduct]);
       toast({ title: "Éxito", description: "Producto agregado." });
     }
-    setForm({ name: "", price: "", category: "", stock: "0" });
+    setForm({ name: "", price: "", category: "", stock: "5" });
   };
 
   const handleEdit = (producto: Product) => {
@@ -126,14 +125,14 @@ export default function ListaCostosPage() {
     setProductos(productos.filter(p => p.id !== id));
     if (editId === id) {
       setEditId(null);
-      setForm({ name: "", price: "", category: "", stock: "0" });
+      setForm({ name: "", price: "", category: "", stock: "5" });
     }
     toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
   };
 
   const handleCancel = () => {
     setEditId(null);
-    setForm({ name: "", price: "", category: "", stock: "0" });
+    setForm({ name: "", price: "", category: "", stock: "5" });
   };
 
   if (isLoading) {
@@ -251,11 +250,27 @@ export default function ListaCostosPage() {
               <TableBody>
                 {productos.length > 0 ? (
                   productos.map((producto) => (
-                    <TableRow key={producto.id}>
+                    <TableRow 
+                      key={producto.id}
+                      className={cn(
+                        producto.stock === 0 && "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40",
+                        producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40"
+                      )}
+                    >
                       <TableCell>{producto.id}</TableCell>
                       <TableCell className="font-medium">{producto.name}</TableCell>
                       <TableCell className="text-right">${producto.price.toLocaleString("es-AR")}</TableCell>
-                      <TableCell className="text-right">{producto.stock}</TableCell>
+                      <TableCell 
+                        className={cn(
+                          "text-right font-semibold",
+                          producto.stock === 0 && "text-red-600 dark:text-red-400",
+                          producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "text-yellow-700 dark:text-yellow-400"
+                        )}
+                      >
+                        {producto.stock}
+                        {producto.stock === 0 && " (Sin Stock)"}
+                        {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && " (Bajo Stock)"}
+                      </TableCell>
                       <TableCell>{producto.category}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1">
