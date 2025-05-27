@@ -12,12 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
-import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload, StickyNote, FileSignature } from 'lucide-react';
+import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload, StickyNote, FileSignature, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const saleFormSchema = z.object({
@@ -25,7 +25,7 @@ const saleFormSchema = z.object({
   quantity: z.coerce.number().min(1, { message: 'La cantidad debe ser al menos 1.' }),
   salePrice: z.coerce.number().min(0, { message: 'El precio de venta no puede ser negativo.' }),
   saleDate: z.string().min(1, { message: 'Debe seleccionar una fecha.' }),
-  buyerName: z.string().min(1, { message: 'El nombre del comprador es requerido.' }).max(100),
+  buyerName: z.string().min(1, { message: 'El nombre del comercio/cliente es requerido.' }).max(100),
   paymentMethod: z.string().min(1, { message: 'Debe seleccionar un método de pago.' }),
   notes: z.string().optional(),
   hasInvoice: z.boolean().optional().default(false),
@@ -36,7 +36,7 @@ type SaleFormValues = z.infer<typeof saleFormSchema>;
 interface RegisteredSale extends SaleFormValues {
   id: string;
   productName: string;
-  costPrice: number;
+  costPrice: number; // Your cost
   totalGain: number;
 }
 
@@ -48,17 +48,14 @@ const paymentMethods = [
   { value: 'mercado_pago', label: 'Mercado Pago' },
 ];
 
-const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
-const SALES_CONSUMER_FINAL_STORAGE_KEY = 'shopvision_sales_consumer_final';
-const DEFAULT_FINAL_CONSUMER_MARGIN = 45; // 45%
+const SALES_WHOLESALE_STORAGE_KEY = 'shopvision_sales_wholesale';
+const WHOLESALE_MARKUP_PERCENTAGE = 20; // 20%
 
-export default function VentasConsumidorFinalPage() {
+export default function VentasMayoristasPage() {
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [sales, setSales] = useState<RegisteredSale[]>([]);
   const [selectedProductCost, setSelectedProductCost] = useState<number>(0);
   const [calculatedGain, setCalculatedGain] = useState<number>(0);
-  const [finalConsumerMargin, setFinalConsumerMargin] = useState<number>(DEFAULT_FINAL_CONSUMER_MARGIN);
-
 
   const { toast } = useToast();
 
@@ -68,7 +65,7 @@ export default function VentasConsumidorFinalPage() {
       productId: '',
       quantity: 1,
       salePrice: 0,
-      saleDate: new Date().toISOString().split('T')[0], // Default to today
+      saleDate: new Date().toISOString().split('T')[0],
       buyerName: '',
       paymentMethod: '',
       notes: '',
@@ -91,22 +88,14 @@ export default function VentasConsumidorFinalPage() {
     }
     setProductsList(productData);
 
-    const savedSales = localStorage.getItem(SALES_CONSUMER_FINAL_STORAGE_KEY);
+    const savedSales = localStorage.getItem(SALES_WHOLESALE_STORAGE_KEY);
     if (savedSales) {
       setSales(JSON.parse(savedSales));
-    }
-
-    const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
-    if (storedMargin) {
-      const parsedMargin = parseFloat(storedMargin);
-      if (!isNaN(parsedMargin)) {
-        setFinalConsumerMargin(parsedMargin);
-      }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(SALES_CONSUMER_FINAL_STORAGE_KEY, JSON.stringify(sales));
+    localStorage.setItem(SALES_WHOLESALE_STORAGE_KEY, JSON.stringify(sales));
   }, [sales]);
 
   const watchedProductId = form.watch('productId');
@@ -117,27 +106,28 @@ export default function VentasConsumidorFinalPage() {
     if (watchedProductId && productsList.length > 0) {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
-        setSelectedProductCost(product.price);
-        const suggestedSalePrice = product.price * (1 + finalConsumerMargin / 100);
-        form.setValue('salePrice', parseFloat(suggestedSalePrice.toFixed(2)));
+        setSelectedProductCost(product.price); // This is your cost
+        const suggestedWholesalePrice = product.price * (1 + WHOLESALE_MARKUP_PERCENTAGE / 100);
+        form.setValue('salePrice', parseFloat(suggestedWholesalePrice.toFixed(2)));
       } else {
         setSelectedProductCost(0);
         form.setValue('salePrice', 0);
       }
     } else {
       setSelectedProductCost(0);
-       if (!watchedProductId) { // Reset salePrice if no product is selected
+      if (!watchedProductId) { 
         form.setValue('salePrice', 0);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedProductId, productsList, finalConsumerMargin]); // form not needed to avoid re-runs
+  }, [watchedProductId, productsList]);
 
   useEffect(() => {
     const quantity = Number(watchedQuantity) || 0;
-    const salePrice = Number(watchedSalePrice) || 0;
-    const cost = Number(selectedProductCost) || 0;
+    const salePrice = Number(watchedSalePrice) || 0; // This is the wholesale price (cost + 20%)
+    const cost = Number(selectedProductCost) || 0; // This is your original cost
     
+    // Gain for a wholesale is (Wholesale Price - Your Original Cost) * Quantity
     const gain = (salePrice - cost) * quantity;
     setCalculatedGain(isNaN(gain) ? 0 : gain);
   }, [watchedSalePrice, selectedProductCost, watchedQuantity]);
@@ -154,12 +144,12 @@ export default function VentasConsumidorFinalPage() {
       ...data,
       id: Date.now().toString(), 
       productName: product.name,
-      costPrice: product.price,
-      totalGain: (data.salePrice - product.price) * data.quantity,
+      costPrice: product.price, // Your cost
+      totalGain: (data.salePrice - product.price) * data.quantity, // data.salePrice is cost + 20%
     };
 
     setSales(prevSales => [newSale, ...prevSales]);
-    toast({ title: "Venta a C. Final Registrada", description: `${product.name} (x${data.quantity}) registrada para ${data.buyerName}.` });
+    toast({ title: "Venta Mayorista Registrada", description: `${product.name} (x${data.quantity}) registrada para ${data.buyerName}.` });
     
     form.reset({
       productId: '',
@@ -185,8 +175,8 @@ export default function VentasConsumidorFinalPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gestión de Ventas a Consumidor Final"
-        description="Registra nuevas ventas al público y visualiza el historial."
+        title="Gestión de Ventas Mayoristas"
+        description="Registra nuevas ventas a comercios/clientes mayoristas y visualiza el historial."
       />
       
       <div className="flex flex-wrap gap-3 mb-6">
@@ -196,16 +186,14 @@ export default function VentasConsumidorFinalPage() {
         <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('PDF')}>
           <FileText className="mr-2 h-4 w-4" /> Descargar PDF
         </Button>
-        <Button variant="outline" size="sm" onClick={() => handleExportPlaceholder('Importar desde Excel')}>
-          <Upload className="mr-2 h-4 w-4" /> Importar desde Excel
-        </Button>
+        {/* Import button might be less relevant here or need different logic */}
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
-            <PlusCircle className="mr-2 h-5 w-5 text-primary" />
-            Registrar Nueva Venta (Consumidor Final)
+            <Users className="mr-2 h-5 w-5 text-primary" />
+            Registrar Nueva Venta (Mayorista)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -255,7 +243,7 @@ export default function VentasConsumidorFinalPage() {
                   )}
                 />
                 <FormItem>
-                  <FormLabel>Costo Unitario</FormLabel>
+                  <FormLabel>Costo Unitario (Tu Costo)</FormLabel>
                   <Input type="number" value={selectedProductCost.toFixed(2)} disabled className="bg-muted" />
                 </FormItem>
                 <FormField
@@ -263,7 +251,7 @@ export default function VentasConsumidorFinalPage() {
                   name="salePrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Precio Venta Unitario</FormLabel>
+                      <FormLabel>Precio Venta Unit. (Costo + 20%)</FormLabel>
                       <FormControl>
                         <Input type="number" min="0" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                       </FormControl>
@@ -276,9 +264,9 @@ export default function VentasConsumidorFinalPage() {
                   name="buyerName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><User className="mr-1 h-4 w-4 text-muted-foreground" />Nombre del Comprador</FormLabel>
+                      <FormLabel className="flex items-center"><User className="mr-1 h-4 w-4 text-muted-foreground" />Nombre del Comercio/Cliente</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ej: Juan Pérez" {...field} />
+                        <Input placeholder="Ej: Tienda ABC" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -359,7 +347,7 @@ export default function VentasConsumidorFinalPage() {
               </div>
               <Button type="submit" className="mt-4" size="lg">
                 <DollarSign className="mr-2 h-4 w-4" />
-                Registrar Venta
+                Registrar Venta Mayorista
               </Button>
             </form>
           </Form>
@@ -370,10 +358,10 @@ export default function VentasConsumidorFinalPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <BarChart2 className="mr-2 h-5 w-5 text-primary" />
-            Ventas a C. Final Registradas ({sales.length})
+            Ventas Mayoristas Registradas ({sales.length})
           </CardTitle>
            <CardDescription>
-            Aquí puedes ver las ventas a consumidor final que has registrado.
+            Aquí puedes ver las ventas mayoristas que has registrado.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -384,11 +372,11 @@ export default function VentasConsumidorFinalPage() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Producto</TableHead>
-                    <TableHead>Comprador</TableHead>
+                    <TableHead>Comercio/Cliente</TableHead>
                     <TableHead>Método Pago</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
-                    <TableHead className="text-right">Costo Unit.</TableHead>
-                    <TableHead className="text-right">Venta Unit.</TableHead>
+                    <TableHead className="text-right">Tu Costo Unit.</TableHead>
+                    <TableHead className="text-right">Venta Unit. (Mayorista)</TableHead>
                     <TableHead className="text-right">Ganancia Total</TableHead>
                     <TableHead>Factura</TableHead>
                     <TableHead>Notas</TableHead>
@@ -415,7 +403,7 @@ export default function VentasConsumidorFinalPage() {
               </Table>
             </div>
           ) : (
-             <p className="text-center text-muted-foreground py-4">No hay ventas a consumidor final registradas todavía.</p>
+             <p className="text-center text-muted-foreground py-4">No hay ventas mayoristas registradas todavía.</p>
           )}
         </CardContent>
       </Card>

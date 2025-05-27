@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { User } from '@/lib/authUtils';
-import { Home, ListChecks, ShoppingBag, BarChart2, Camera, DollarSign, Briefcase } from 'lucide-react';
+import { Home, ListChecks, ShoppingBag, BarChart2, Camera, DollarSign, Briefcase, Users } from 'lucide-react';
 
 interface Tab {
   id: string;
@@ -26,10 +26,10 @@ export function TabsNav({ userType }: TabsNavProps) {
   const vendedoraTabs: Tab[] = [
     { id: 'home', label: 'Home', href: '/dashboard', icon: Home },
     { id: 'listaCostos', label: 'Costos Privados', href: '/dashboard/lista-costos', icon: DollarSign },
-    // { id: 'listaComercios', label: 'Para Comercios', href: '/dashboard/lista-comercios', icon: ShoppingBag }, // Removed this tab
-    { id: 'listaFinal', label: 'Consumidor Final', href: '/dashboard/lista-final', icon: ListChecks },
+    { id: 'ventasConsumidorFinal', label: 'Ventas C. Final', href: '/dashboard/ventas', icon: BarChart2 },
+    { id: 'ventasMayoristas', label: 'Ventas Mayoristas', href: '/dashboard/ventas-mayoristas', icon: Users },
     { id: 'catalogoVendedora', label: 'Mi Catálogo (Público)', href: '/dashboard/catalogo-vendedora', icon: Camera },
-    { id: 'ventas', label: 'Gestión de Ventas', href: '/dashboard/ventas', icon: BarChart2 },
+    { id: 'consumidorFinal', label: 'Consumidor Final', href: '/dashboard/lista-final', icon: ListChecks },
     { id: 'portalCliente', label: 'Portal Cliente', href: '/dashboard/vista-cliente', icon: Briefcase },
   ];
 
@@ -56,15 +56,12 @@ export function TabsNav({ userType }: TabsNavProps) {
     <nav className="flex flex-wrap gap-2 p-4 border-b bg-card items-center">
       {tabs.map((tab) => {
         let isActive = false;
-        if ((tab.id === 'home' || tab.id === 'clienteHome') && tab.href === '/dashboard') {
-          isActive = pathname === '/dashboard';
-        } else {
+        // Exact match for dashboard home
+        if ((tab.id === 'home' && userType === 'vendedora' && pathname === '/dashboard') || 
+            (tab.id === 'clienteHome' && userType === 'cliente' && pathname === '/dashboard')) {
+          isActive = true;
+        } else if (tab.href !== '/dashboard') { // For other tabs, use startsWith
           isActive = pathname.startsWith(tab.href);
-        }
-
-        if (pathname === '/dashboard') {
-            if (userType === 'vendedora' && tab.id !== 'home') isActive = false;
-            if (userType === 'cliente' && tab.id !== 'clienteHome') isActive = false;
         }
 
 
@@ -88,3 +85,5 @@ export function TabsNav({ userType }: TabsNavProps) {
     </nav>
   );
 }
+
+    
