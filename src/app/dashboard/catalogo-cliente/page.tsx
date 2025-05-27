@@ -15,8 +15,8 @@ import type { Product } from '@/lib/types';
 import { Camera, Percent, FileImage, ArrowLeftCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin'; 
-const DEFAULT_CLIENT_MARGIN = 30;
+const CLIENT_MARGIN_KEY = 'shopvision_clientOwnMargin';
+const DEFAULT_CLIENT_MARGIN = 30; // Default margin if not found or invalid
 const WHOLESALE_MARKUP_PERCENTAGE = 20; // Vendedora's markup for wholesale clients
 
 export default function CatalogoClientePage() {
@@ -53,7 +53,7 @@ export default function CatalogoClientePage() {
   useEffect(() => {
     localStorage.setItem(CLIENT_MARGIN_KEY, margen.toString());
   }, [margen]);
-  
+
   const handleMargenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMargen = parseInt(e.target.value, 10);
     if (!isNaN(newMargen) && newMargen >= 0 && newMargen <= 500) {
@@ -69,7 +69,7 @@ export default function CatalogoClientePage() {
       description: "La descarga del catálogo PDF para clientes aún no está implementada.",
     });
   };
-  
+
   const getClientPurchasePrice = (baseVendorPrice: number): number => {
     return baseVendorPrice * (1 + WHOLESALE_MARKUP_PERCENTAGE / 100);
   };
@@ -97,8 +97,15 @@ export default function CatalogoClientePage() {
               </div>
             </div>
              <div className="mb-8 flex flex-wrap gap-4">
-                <Skeleton className="h-10 w-48 rounded" />
-                <Skeleton className="h-10 w-52 rounded" />
+                <Button variant="outline" asChild>
+                  <Link href="/dashboard/vista-cliente">
+                    <ArrowLeftCircle className="mr-2 h-4 w-4" />
+                    Volver al Portal Cliente
+                  </Link>
+                </Button>
+                <Button variant="outline" onClick={handleDownloadCatalog}>
+                    <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
+                </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, index) => (
@@ -137,7 +144,7 @@ export default function CatalogoClientePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-8 p-4 border rounded-lg bg-muted/30 max-w-md">
+          <div className="mb-6 p-4 border rounded-lg bg-muted/30 max-w-md">
             <Label htmlFor="margen-cliente" className="text-sm font-medium block mb-1">Tu margen de ganancia para reventa (%):</Label>
             <div className="flex items-center space-x-2">
               <Input
@@ -153,16 +160,16 @@ export default function CatalogoClientePage() {
             </div>
              <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará a tus precios de compra para calcular tus precios de venta al público.</p>
           </div>
-          
+
           <div className="mb-8 flex flex-wrap gap-4">
-            <Button variant="outline" onClick={handleDownloadCatalog}>
-                <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
-            </Button>
-            <Button variant="outline" asChild>
+             <Button variant="outline" asChild>
               <Link href="/dashboard/vista-cliente">
                 <ArrowLeftCircle className="mr-2 h-4 w-4" />
                 Volver al Portal Cliente
               </Link>
+            </Button>
+            <Button variant="outline" onClick={handleDownloadCatalog}>
+                <FileImage className="mr-2 h-4 w-4" /> Descargar Catálogo PDF
             </Button>
           </div>
 
@@ -194,7 +201,7 @@ export default function CatalogoClientePage() {
                         ${clientSellingPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                        <p className="text-xs text-muted-foreground">
-                        Tu costo: ${clientPurchasePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        Tu costo de compra: ${clientPurchasePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
                     </CardContent>
