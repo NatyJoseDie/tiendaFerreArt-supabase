@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera, TrendingUp, List, PackageWarning } from 'lucide-react';
+import { AlertCircle, BarChart, Settings, ShoppingBag, DollarSign, Camera, TrendingUp, List, AlertTriangle } from 'lucide-react'; // Changed PackageWarning to AlertTriangle
 import { Button } from '@/components/ui/button';
 import { getAllProducts } from '@/data/mock-products'; 
 import type { Product } from '@/lib/types';
@@ -120,7 +120,7 @@ export default function DashboardHomePage() {
              <Card className="bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Alertas de Stock</CardTitle>
-                <PackageWarning className="h-4 w-4 text-muted-foreground" />
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" /> {/* Changed PackageWarning to AlertTriangle */}
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-8 w-1/5 mb-1" />
@@ -181,7 +181,7 @@ export default function DashboardHomePage() {
           <Card className="bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Alertas de Stock</CardTitle>
-              <PackageWarning className="h-4 w-4 text-muted-foreground" />
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" /> {/* Changed PackageWarning to AlertTriangle */}
             </CardHeader>
             <CardContent>
               {lowStockProducts.length > 0 ? (
@@ -204,7 +204,8 @@ export default function DashboardHomePage() {
         <Card className="shadow-md border-orange-500">
           <CardHeader>
             <CardTitle className="text-orange-600 flex items-center">
-              <PackageWarning className="mr-2 h-5 w-5" /> Productos con Stock Crítico
+              <AlertTriangle className="mr-2 h-5 w-5" /> {/* Changed PackageWarning to AlertTriangle */}
+              Productos con Stock Crítico
             </CardTitle>
             <CardDescription>
               Los siguientes productos tienen stock igual o menor a {LOW_STOCK_THRESHOLD_DASHBOARD} unidades. Considera reponerlos.
@@ -242,8 +243,14 @@ export default function DashboardHomePage() {
                 <Button variant="outline" onClick={() => router.push('/dashboard/realizar-pedido')}><ShoppingBag className="mr-2 h-4 w-4" /> Realizar Pedido</Button>
               </>
             )}
+             {/* General Settings/Config Button - Placeholder */}
+            <Button variant="ghost" onClick={() => alert('Configuración no implementada aún.')}>
+                <Settings className="mr-2 h-4 w-4" /> Configuración
+            </Button>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    
