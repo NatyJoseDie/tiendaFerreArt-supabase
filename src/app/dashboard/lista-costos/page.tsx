@@ -27,8 +27,10 @@ import {
 import { Trash2, Edit3, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Get unique categories from products for the select dropdown
-const productCategories = Array.from(new Set(getAllProducts().map(p => p.category))).sort();
+// Get unique, non-empty categories from products for the select dropdown
+const productCategories = Array.from(
+  new Set(getAllProducts().map(p => p.category).filter(cat => cat && cat.trim() !== ""))
+).sort();
 
 
 export default function ListaCostosPage() {
@@ -71,7 +73,8 @@ export default function ListaCostosPage() {
       toast({ title: "Éxito", description: "Producto actualizado." });
       setEditId(null);
     } else {
-      const newId = productos.length ? (Math.max(...productos.map(p => Number(p.id))) + 1).toString() : "1";
+      // Ensure newId is a string
+      const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id, 10))) + 1).toString() : "1";
       const newProduct: Product = {
         id: newId,
         name: form.name,
@@ -152,7 +155,7 @@ export default function ListaCostosPage() {
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="" disabled>Seleccionar categoría</SelectItem>
+                    {/* The SelectValue component already handles the placeholder */}
                     {productCategories.map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
