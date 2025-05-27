@@ -68,12 +68,15 @@ export default function VentasPage() {
     const prods = getAllProducts();
     setProductsList(prods);
     if (prods.length > 0) {
-      const defaultProduct = prods[0];
-      // form.setValue('productId', defaultProduct.id.toString()); // Let user select first
+      // Intentionally not setting default product or price to allow user selection first
+      // If you want to auto-select the first product, uncomment the lines below:
+      // const defaultProduct = prods[0];
+      // form.setValue('productId', defaultProduct.id.toString());
       // setSelectedProductCost(defaultProduct.price);
-      // form.setValue('salePrice', defaultProduct.price); 
+      // form.setValue('salePrice', defaultProduct.price);
     }
-  }, []); // Removed form from dependencies to avoid re-triggering
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   const watchedProductId = form.watch('productId');
   const watchedQuantity = form.watch('quantity');
@@ -84,18 +87,22 @@ export default function VentasPage() {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
         setSelectedProductCost(product.price);
-        // Update sale price only if it's 0 or still reflecting old product's cost
-        if (form.getValues('salePrice') === 0 || form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) {
+        // Update sale price only if it's 0 or still reflecting old product's cost, and cost actually changed
+        if (form.getValues('salePrice') === 0 || (form.getValues('salePrice') === selectedProductCost && selectedProductCost !== product.price) ) {
            form.setValue('salePrice', product.price); 
         }
       } else {
-        setSelectedProductCost(0); // Reset if product not found
+        setSelectedProductCost(0); 
+        if (form.getValues('salePrice') !== 0) { // Reset sale price if product becomes invalid
+            // form.setValue('salePrice', 0); // Option: reset sale price if product is deselected or invalid
+        }
       }
     } else {
-        setSelectedProductCost(0); // Reset if no product selected
+        setSelectedProductCost(0); 
+        // form.setValue('salePrice', 0); // Option: reset sale price if no product selected
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedProductId, productsList, form.getValues('salePrice')]); // Watching specific form value
+  }, [watchedProductId, productsList]); 
 
 
   useEffect(() => {
@@ -166,8 +173,10 @@ export default function VentasPage() {
                           field.onChange(value);
                           const selectedProd = productsList.find(p => p.id === value);
                           if (selectedProd) {
-                            form.setValue('salePrice', selectedProd.price); 
+                            // form.setValue('salePrice', selectedProd.price); // Keep user's price if they changed it
                             setSelectedProductCost(selectedProd.price);
+                          } else {
+                            setSelectedProductCost(0);
                           }
                         }} 
                         value={field.value}
@@ -269,7 +278,7 @@ export default function VentasPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem className="lg:col-span-2"> {/* Span 2 columns on large screens */}
+                 <FormItem> {/* Removed lg:col-span-2 */}
                   <FormLabel>Ganancia Total Calculada</FormLabel>
                   <Input type="number" value={calculatedGain.toFixed(2)} disabled className={cn(calculatedGain >= 0 ? 'text-green-600' : 'text-red-600', "font-semibold bg-muted text-lg")} />
                 </FormItem>
