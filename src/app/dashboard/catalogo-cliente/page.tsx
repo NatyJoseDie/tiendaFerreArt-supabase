@@ -130,17 +130,17 @@ export default function CatalogoClientePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mi Catálogo (Cliente/Comercio)"
-        description="Explora los productos con tu margen de ganancia para reventa aplicado. Puedes descargar este catálogo."
+        title="Mi Catálogo para Reventa"
+        description="Este es el catálogo con TUS precios de venta al público. Ajusta tu margen y descárgalo para compartirlo."
       />
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Camera className="mr-2 h-5 w-5 text-primary" />
-            Tu Catálogo Personalizado para Reventa
+            Tu Catálogo de Reventa
           </CardTitle>
            <CardDescription>
-            Ajusta tu margen y visualiza los precios finales de venta al público de los productos.
+            Define tu margen de ganancia y visualiza los precios finales que mostrarás a tus clientes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -158,7 +158,7 @@ export default function CatalogoClientePage() {
               />
               <Percent className="h-5 w-5 text-muted-foreground" />
             </div>
-             <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará a tus precios de compra para calcular tus precios de venta al público.</p>
+             <p className="text-xs text-muted-foreground mt-2">Este margen se aplicará sobre el precio al que nos compras los productos.</p>
           </div>
 
           <div className="mb-8 flex flex-wrap gap-4">
@@ -176,8 +176,8 @@ export default function CatalogoClientePage() {
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
-                const clientPurchasePrice = getClientPurchasePrice(product.price);
-                const clientSellingPrice = clientPurchasePrice * (1 + margen / 100);
+                const clientPurchasePrice = getClientPurchasePrice(product.price); // Precio al que el cliente TE COMPRA
+                const clientSellingPrice = clientPurchasePrice * (1 + margen / 100); // Precio al que el cliente REVENDE
                 const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
 
@@ -200,9 +200,7 @@ export default function CatalogoClientePage() {
                       <p className="text-lg font-semibold text-primary catalog-price">
                         ${clientSellingPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                       <p className="text-xs text-muted-foreground">
-                        Tu costo de compra: ${clientPurchasePrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
+                      {/* Línea de costo de compra del cliente eliminada de la vista del catálogo para reventa */}
                       <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
                     </CardContent>
                   </Card>
