@@ -153,7 +153,7 @@ export default function ListaClientePage() {
                 <TableRow>
                   <TableHead className="w-[50px]">ID</TableHead>
                   <TableHead>Producto</TableHead>
-                  <TableHead className="text-right">Precio Compra (Costo + 20%)</TableHead>
+                  <TableHead className="text-right">Precio Compra</TableHead>
                   <TableHead className="text-right">Tu Precio de Venta</TableHead>
                   <TableHead>Categoría</TableHead>
                 </TableRow>
