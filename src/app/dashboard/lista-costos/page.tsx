@@ -24,11 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon } from "lucide-react";
+import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { storage } from '@/lib/firebaseConfig'; // Import storage
+import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
 
@@ -42,13 +42,15 @@ interface FormState {
   category: string;
   stock: string;
   imageFile: File | null;
+  currentImageUrl: string;
 }
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [form, setForm] = useState<FormState>({ name: "", price: "", category: "", stock: "5", imageFile: null });
+  const [form, setForm] = useState<FormState>({ name: "", price: "", category: "", stock: "5", imageFile: null, currentImageUrl: '' });
   const [editId, setEditId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { toast } = useToast();
@@ -101,6 +103,13 @@ export default function ListaCostosPage() {
     setForm({ ...form, category: value });
   };
 
+  const resetForm = () => {
+    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null, currentImageUrl: '' });
+    setEditId(null);
+    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.price || !form.category || form.stock === "") {
@@ -118,21 +127,31 @@ export default function ListaCostosPage() {
         toast({ title: "Error", description: "El stock debe ser un número entero no negativo.", variant: "destructive" });
         return;
     }
-
-    let imageUrl = editId ? productos.find(p => p.id === editId)?.images[0] || `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}` : `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`;
-
+    
+    setIsSubmitting(true);
+    let imageUrl = form.currentImageUrl || (editId ? productos.find(p => p.id === editId)?.images[0] : '');
+    
     if (form.imageFile) {
-      toast({ title: "Subiendo imagen...", description: "Por favor espera." });
+      const uploadingToastId = toast({ title: "Subiendo imagen...", description: "Por favor espera.", duration: Infinity });
       try {
         const imageRef = ref(storage, `product_images/${Date.now()}_${form.imageFile.name}`);
         await uploadBytes(imageRef, form.imageFile);
         imageUrl = await getDownloadURL(imageRef);
+        uploadingToastId.dismiss();
         toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error uploading image: ", error);
-        toast({ title: "Error de subida", description: "No se pudo subir la imagen.", variant: "destructive" });
-        // Decide if you want to proceed without image or stop
+        uploadingToastId.dismiss(); 
+        toast({ 
+          title: "Error de subida de imagen", 
+          description: `No se pudo subir la imagen. ${error.message || 'Intenta de nuevo.'}`, 
+          variant: "destructive" 
+        });
+        setIsSubmitting(false);
+        return; 
       }
+    } else if (!imageUrl && !editId) { // For new products without a file, ensure there's at least a placeholder
+        imageUrl = `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`;
     }
     
     const productData = {
@@ -140,23 +159,21 @@ export default function ListaCostosPage() {
       price: priceAsNumber,
       category: form.category,
       stock: stockAsNumber,
-      description: `Descripción de ${form.name}`, // Default description or maintain existing if editing
-      images: [imageUrl], // Always an array, store new/updated URL
+      description: `Descripción de ${form.name}`, // Default description
+      images: imageUrl ? [imageUrl] : (editId ? [] : [`https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`]), // Handle existing images if any
     };
 
     if (editId) {
       setProductos(productos.map(p =>
-        p.id === editId ? { ...p, ...productData } : p
+        p.id === editId ? { ...p, ...productData, images: productData.images.length > 0 ? productData.images : p.images } : p
       ));
       toast({ title: "Éxito", description: "Producto actualizado." });
-      setEditId(null);
     } else {
-      const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id, 10))) + 1).toString() : "1";
+      const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id || "0", 10))) + 1).toString() : "1";
       const newProduct: Product = {
         id: newId,
         ...productData,
-        // Ensure all Product fields are covered
-        longDescription: productData.description,
+        longDescription: productData.description, // Default long description
         currency: '$',
         featured: false,
         sku: `SKU-${newId}`,
@@ -166,10 +183,8 @@ export default function ListaCostosPage() {
       setProductos(prev => [...prev, newProduct]);
       toast({ title: "Éxito", description: "Producto agregado." });
     }
-    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
-    // Clear file input visually
-    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
-    if (fileInput) fileInput.value = "";
+    resetForm();
+    setIsSubmitting(false);
   };
 
   const handleEdit = (producto: Product) => {
@@ -178,7 +193,8 @@ export default function ListaCostosPage() {
       price: producto.price.toString(), 
       category: producto.category, 
       stock: producto.stock.toString(),
-      imageFile: null // Reset file input, user must re-select if they want to change
+      imageFile: null,
+      currentImageUrl: producto.images && producto.images[0] ? producto.images[0] : ''
     });
     setEditId(producto.id);
     const formElement = document.getElementById('product-form-card');
@@ -190,17 +206,13 @@ export default function ListaCostosPage() {
   const handleDelete = (id: string) => {
     setProductos(productos.filter(p => p.id !== id));
     if (editId === id) {
-      setEditId(null);
-      setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
+      resetForm();
     }
     toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
   };
 
   const handleCancel = () => {
-    setEditId(null);
-    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
-    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
-    if (fileInput) fileInput.value = "";
+    resetForm();
   };
 
   const filteredProducts = useMemo(() => {
@@ -267,10 +279,10 @@ export default function ListaCostosPage() {
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    {productCategories.map(cat => (
+                    {productCategories.filter(cat => cat && cat.trim() !== "").map(cat => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
-                     {!productCategories.includes(form.category) && form.category && (
+                     {form.category && !productCategories.includes(form.category) && (
                         <SelectItem value={form.category} disabled>{form.category} (Nueva)</SelectItem>
                      )}
                   </SelectContent>
@@ -280,18 +292,18 @@ export default function ListaCostosPage() {
                 <Label htmlFor="imageFile">Imagen del Producto</Label>
                 <Input id="imageFile" type="file" name="imageFile" accept="image/*" onChange={handleFileChange} />
                 {form.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {form.imageFile.name}</p>}
-                {!form.imageFile && editId && productos.find(p=>p.id === editId)?.images[0] && (
-                     <p className="text-xs mt-1 text-muted-foreground">Imagen actual: <a href={productos.find(p=>p.id === editId)?.images[0]} target="_blank" rel="noopener noreferrer" className="underline">ver imagen</a> (selecciona un nuevo archivo para cambiarla)</p>
+                {!form.imageFile && form.currentImageUrl && (
+                     <p className="text-xs mt-1 text-muted-foreground">Imagen actual: <a href={form.currentImageUrl} target="_blank" rel="noopener noreferrer" className="underline">ver imagen</a> (selecciona un nuevo archivo para cambiarla)</p>
                 )}
               </div>
             </div>
             <div className="flex space-x-2 pt-2">
-              <Button type="submit">
-                {editId ? <Edit3 className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                {editId ? "Guardar Cambios" : "Agregar Producto"}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editId ? <Edit3 className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
+                {isSubmitting ? (editId ? "Guardando..." : "Agregando...") : (editId ? "Guardar Cambios" : "Agregar Producto")}
               </Button>
               {editId && (
-                <Button type="button" variant="outline" onClick={handleCancel}>
+                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
                   Cancelar Edición
                 </Button>
               )}
@@ -313,7 +325,7 @@ export default function ListaCostosPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las Categorías</SelectItem>
-                  {productCategories.map(cat => (
+                  {productCategories.filter(cat => cat && cat.trim() !== "").map(cat => (
                     <SelectItem key={`filter-${cat}`} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>
@@ -350,14 +362,14 @@ export default function ListaCostosPage() {
                         <TableRow 
                           key={producto.id}
                           className={cn(
-                            producto.stock === 0 && "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40",
-                            producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40"
+                            !producto.stock || producto.stock === 0 ? "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40" : "",
+                            producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD ? "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-800/40" : ""
                           )}
                         >
                           <TableCell>{producto.id}</TableCell>
                           <TableCell>
                             {producto.images && producto.images[0] ? (
-                              <Image src={producto.images[0]} alt={producto.name} width={40} height={40} className="rounded object-cover aspect-square" data-ai-hint={producto.category.toLowerCase() + " product"}/>
+                              <Image src={producto.images[0]} alt={producto.name} width={40} height={40} className="rounded object-cover aspect-square" data-ai-hint={producto.category.toLowerCase() + " product"} onError={(e) => e.currentTarget.src = 'https://placehold.co/40x40.png?text=Error'}/>
                             ) : (
                               <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
@@ -369,20 +381,20 @@ export default function ListaCostosPage() {
                           <TableCell 
                             className={cn(
                               "text-right font-semibold",
-                              producto.stock === 0 && "text-red-600 dark:text-red-400",
-                              producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && "text-yellow-700 dark:text-yellow-400"
+                              !producto.stock || producto.stock === 0 ? "text-red-600 dark:text-red-400" : "",
+                              producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD ? "text-yellow-700 dark:text-yellow-400" : ""
                             )}
                           >
-                            {producto.stock}
-                            {producto.stock === 0 && <span className="block text-xs">(Sin Stock)</span>}
-                            {producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD && <span className="block text-xs">(Bajo Stock)</span>}
+                            {producto.stock || 0}
+                            {(!producto.stock || producto.stock === 0) && <span className="block text-xs">(Sin Stock)</span>}
+                            {(producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD) && <span className="block text-xs">(Bajo Stock)</span>}
                           </TableCell>
                           <TableCell>{producto.category}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmitting}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(producto.id)} className="text-destructive hover:text-destructive">
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmitting}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
