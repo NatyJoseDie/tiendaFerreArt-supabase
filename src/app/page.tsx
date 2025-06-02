@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { useEffect, useState, useMemo } from 'react';
+import type { Product } from '@/lib/types';
+import { getAllProducts } from '@/data/mock-products'; // Assuming getAllProducts exists
+import { ProductCard } from '@/components/products/product-card';
 
 const mainBannerImages = [
   { src: 'https://placehold.co/1200x500.png?text=Super+Oferta+Invierno', alt: 'Oferta de Invierno', hint: 'winter sale', title: 'GRAN LIQUIDACIÓN DE INVIERNO', description: 'Descuentos increíbles en toda la colección.' },
@@ -20,6 +24,18 @@ const categories = [
 ];
 
 export default function HomePage() {
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  
+  useEffect(() => {
+    // Simulate fetching products - in a real app, this would be an API call
+    const products = getAllProducts(); 
+    setAllProducts(products);
+  }, []);
+
+  const featuredProducts = useMemo(() => {
+    return allProducts.filter(p => p.featured).slice(0, 8); // Show up to 8 featured products
+  }, [allProducts]);
+
   return (
     <div className="space-y-12">
       {/* Hero Section - Carousel */}
@@ -86,6 +102,27 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Featured Products Section */}
+      {featuredProducts.length > 0 && (
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight text-center mb-8 mt-12">
+            DESTACADOS
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+            {featuredProducts.map(product => (
+              <ProductCard key={`featured-home-${product.id}`} product={product} minimalDisplay={true} />
+            ))}
+          </div>
+          <div className="text-center mt-8">
+            <Button asChild size="lg" variant="outline">
+              <Link href="/products">
+                VER TODOS LOS PRODUCTOS <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Placeholder for other sections from original app if needed */}
       <section className="bg-secondary/50 p-8 rounded-lg shadow mt-12">

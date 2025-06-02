@@ -12,10 +12,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
-  minimalDisplay?: boolean; // Nueva prop
+  minimalDisplay?: boolean; 
 }
 
 export function ProductCard({ product, minimalDisplay = false }: ProductCardProps) {
@@ -37,9 +38,12 @@ export function ProductCard({ product, minimalDisplay = false }: ProductCardProp
           />
         </Link>
       </CardHeader>
-      <CardContent className={`p-4 flex-grow ${minimalDisplay ? 'pb-3' : ''}`}> {/* Ajustado pb para minimalDisplay */}
+      <CardContent className={cn("p-4 flex-grow", minimalDisplay ? 'pb-3' : '')}>
         <Link href={`/products/${product.id}`}>
-            <CardTitle className={`font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center text-base' : 'text-base'}`}> {/* Cambiado a text-base para ambas vistas */}
+            <CardTitle className={cn(
+                "font-semibold hover:text-primary transition-colors text-base", // text-base for all
+                minimalDisplay ? 'text-center' : '' // Centered for minimal display
+            )}>
             {product.name}
             </CardTitle>
         </Link>
@@ -54,8 +58,8 @@ export function ProductCard({ product, minimalDisplay = false }: ProductCardProp
           </>
         )}
         {minimalDisplay && product.category && (
-           <div className="mt-1.5 text-center"> {/* Ajustado mt */}
-             <Badge variant="outline" className="text-xs">{product.category}</Badge> {/* Hecho Badge más pequeño */}
+           <div className="mt-1.5 text-center"> 
+             <Badge variant="outline" className="text-xs">{product.category}</Badge>
            </div>
         )}
       </CardContent>
