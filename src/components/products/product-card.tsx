@@ -37,9 +37,9 @@ export function ProductCard({ product, minimalDisplay = false }: ProductCardProp
           />
         </Link>
       </CardHeader>
-      <CardContent className={`p-4 flex-grow ${minimalDisplay ? 'pb-2' : ''}`}>
+      <CardContent className={`p-4 flex-grow ${minimalDisplay ? 'pb-3' : ''}`}> {/* Ajustado pb para minimalDisplay */}
         <Link href={`/products/${product.id}`}>
-            <CardTitle className={`text-lg font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center' : ''}`}>
+            <CardTitle className={`font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center text-base' : 'text-lg'}`}> {/* Cambiado a text-base para minimalDisplay */}
             {product.name}
             </CardTitle>
         </Link>
@@ -54,8 +54,8 @@ export function ProductCard({ product, minimalDisplay = false }: ProductCardProp
           </>
         )}
         {minimalDisplay && product.category && (
-           <div className="mt-1 text-center">
-             <Badge variant="outline">{product.category}</Badge>
+           <div className="mt-1.5 text-center"> {/* Ajustado mt */}
+             <Badge variant="outline" className="text-xs">{product.category}</Badge> {/* Hecho Badge más pequeño */}
            </div>
         )}
       </CardContent>
