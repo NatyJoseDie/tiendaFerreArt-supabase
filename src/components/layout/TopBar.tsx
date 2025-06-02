@@ -20,7 +20,7 @@ export function TopBar() {
   const showLoginLink = !user && pathname !== '/login' && !pathname.startsWith('/dashboard');
 
   return (
-    <div className="bg-muted/50 text-sm text-muted-foreground">
+    <div className="bg-muted/50 text-sm text-foreground"> {/* Changed text-muted-foreground to text-foreground */}
       <div className="container mx-auto flex h-10 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <span className="flex items-center">

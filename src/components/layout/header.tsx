@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Heart, Search, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ export function Header() {
           </div>
         </Link>
         <nav className="flex flex-1 items-center space-x-3 lg:space-x-4">
-          {/* Navigation Links - TODO: Add active state styling */}
+          {/* Navigation Links */}
           {[
             { href: '/', label: 'INICIO' },
             { href: '/how-to-buy', label: 'CÓMO COMPRAR' },
@@ -26,7 +27,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+              className="text-xs font-medium text-foreground transition-colors hover:text-primary" /* Changed text-muted-foreground to text-foreground */
             >
               {link.label}
             </Link>
@@ -48,7 +49,7 @@ export function Header() {
                 0
               </span>
             </Button>
-            <span className="text-xs text-muted-foreground">$0.00</span>
+            <span className="text-xs text-foreground">$0.00</span> {/* Changed text-muted-foreground to text-foreground */}
           </div>
         </div>
       </div>
