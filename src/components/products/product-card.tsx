@@ -39,7 +39,7 @@ export function ProductCard({ product, minimalDisplay = false }: ProductCardProp
       </CardHeader>
       <CardContent className={`p-4 flex-grow ${minimalDisplay ? 'pb-3' : ''}`}> {/* Ajustado pb para minimalDisplay */}
         <Link href={`/products/${product.id}`}>
-            <CardTitle className={`font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center text-base' : 'text-lg'}`}> {/* Cambiado a text-base para minimalDisplay */}
+            <CardTitle className={`font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center text-base' : 'text-base'}`}> {/* Cambiado a text-base para ambas vistas */}
             {product.name}
             </CardTitle>
         </Link>
