@@ -42,9 +42,6 @@ export default function HomePage() {
   }, [allProducts]);
 
   const newArrivalProducts = useMemo(() => {
-    // Tomar los primeros 4-8 productos que no sean destacados, como "nuevos ingresos"
-    // O simplemente los primeros, si la lista ya está ordenada por novedad.
-    // Por ahora, tomaremos los primeros 4 productos de la lista general para simplicidad.
     return allProducts.slice(0, 4);
   }, [allProducts]);
 
@@ -178,7 +175,7 @@ export default function HomePage() {
           <p className="text-muted-foreground mb-8">
             Inscribite para recibir nuestras últimas novedades.
           </p>
-          <form onSubmit={handleNewsletterSubmit} className="space-y-4">
+          <form onSubmit={handleNewsletterSubmit} className="space-y-4 max-w-md mx-auto">
             <div>
               <Label htmlFor="newsletterName" className="sr-only">Nombre</Label>
               <Input
@@ -187,7 +184,7 @@ export default function HomePage() {
                 placeholder="Nombre"
                 value={newsletterName}
                 onChange={(e) => setNewsletterName(e.target.value)}
-                className="max-w-md mx-auto"
+                className="w-full"
               />
             </div>
             <div>
@@ -198,10 +195,10 @@ export default function HomePage() {
                 placeholder="Tu E-mail"
                 value={newsletterEmail}
                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                className="max-w-md mx-auto"
+                className="w-full"
               />
             </div>
-            <Button type="submit" size="lg" className="w-full max-w-md mx-auto">
+            <Button type="submit" size="lg" className="w-full">
               INSCRIBIRSE
             </Button>
           </form>
