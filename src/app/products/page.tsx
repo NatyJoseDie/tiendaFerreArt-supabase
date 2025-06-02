@@ -1,3 +1,4 @@
+
 'use client'; // For managing filter state and search
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,6 +10,7 @@ import { getAllProducts, getCategories as fetchCategories } from '@/data/mock-pr
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Added import
 import { Frown } from 'lucide-react';
 
 export default function ProductsPage() {
