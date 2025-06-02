@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/types';
@@ -14,9 +15,10 @@ import { ArrowRight } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
+  minimalDisplay?: boolean; // Nueva prop
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, minimalDisplay = false }: ProductCardProps) {
   const firstImage = product.images[0] || 'https://placehold.co/400x400.png';
   const imageHint = firstImage.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
 
@@ -35,29 +37,40 @@ export function ProductCard({ product }: ProductCardProps) {
           />
         </Link>
       </CardHeader>
-      <CardContent className="p-4 flex-grow">
+      <CardContent className={`p-4 flex-grow ${minimalDisplay ? 'pb-2' : ''}`}>
         <Link href={`/products/${product.id}`}>
-            <CardTitle className="text-lg font-semibold hover:text-primary transition-colors">
+            <CardTitle className={`text-lg font-semibold hover:text-primary transition-colors ${minimalDisplay ? 'text-center' : ''}`}>
             {product.name}
             </CardTitle>
         </Link>
-        <p className="text-sm text-muted-foreground mt-1 h-10 overflow-hidden text-ellipsis">
-          {product.description}
-        </p>
-        <div className="mt-2">
-          <Badge variant="secondary">{product.category}</Badge>
-        </div>
+        {!minimalDisplay && (
+          <>
+            <p className="text-sm text-muted-foreground mt-1 h-10 overflow-hidden text-ellipsis">
+              {product.description}
+            </p>
+            <div className="mt-2">
+              <Badge variant="secondary">{product.category}</Badge>
+            </div>
+          </>
+        )}
+        {minimalDisplay && product.category && (
+           <div className="mt-1 text-center">
+             <Badge variant="outline">{product.category}</Badge>
+           </div>
+        )}
       </CardContent>
-      <CardFooter className="p-4 flex justify-between items-center">
-        <p className="text-xl font-bold text-primary">
-          {product.currency || '$'}{product.price.toFixed(2)}
-        </p>
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/products/${product.id}`}>
-            Detalles <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </CardFooter>
+      {!minimalDisplay && (
+        <CardFooter className="p-4 flex justify-between items-center">
+          <p className="text-xl font-bold text-primary">
+            {product.currency || '$'}{product.price.toFixed(2)}
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/products/${product.id}`}>
+              Detalles <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

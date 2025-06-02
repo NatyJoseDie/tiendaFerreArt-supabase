@@ -134,40 +134,40 @@ export default function ProductsPage() {
 
       {newProducts.length > 0 && (
         <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-6">Novedades</h2>
+          <h2 className="text-2xl font-semibold tracking-tight mb-6 text-center">Novedades</h2>
           <Carousel 
             opts={{ align: "start", loop: true }} 
-            plugins={[ Autoplay({ delay: 4000, stopOnInteraction: false }) ]}
+            plugins={[ Autoplay({ delay: 3000, stopOnInteraction: true }) ]} // Aumenté el delay y permito stop on interaction
             className="w-full max-w-xs sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
           >
             <CarouselContent className="-ml-1">
               {newProducts.map(product => (
-                <CarouselItem key={product.id} className="pl-1 md:basis-1/2 lg:basis-1/3">
-                  <div className="p-1">
-                    <ProductCard product={product} />
+                <CarouselItem key={`new-${product.id}`} className="pl-1 md:basis-1/2 lg:basis-1/3">
+                  <div className="p-1 h-full">
+                    <ProductCard product={product} minimalDisplay={true} /> {/* Usar visualización mínima */}
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="hidden sm:flex" />
-            <CarouselNext className="hidden sm:flex" />
+            <CarouselPrevious className="hidden sm:flex left-[-50px]" /> {/* Ajustar posición de botones */}
+            <CarouselNext className="hidden sm:flex right-[-50px]" />
           </Carousel>
         </section>
       )}
 
       {featuredProducts.length > 0 && (
         <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-6 mt-12">Productos Destacados</h2>
+          <h2 className="text-2xl font-semibold tracking-tight mb-6 mt-12 text-center">Productos Destacados</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {featuredProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={`featured-${product.id}`} product={product} />
             ))}
           </div>
         </section>
       )}
       
       <section>
-        <h2 className="text-2xl font-semibold tracking-tight mb-6 mt-12">Todos los Productos</h2>
+        <h2 className="text-2xl font-semibold tracking-tight mb-6 mt-12 text-center">Todos los Productos</h2>
         <div className="mb-6">
           <SearchBar onSearch={handleSearch} />
         </div>
