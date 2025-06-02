@@ -9,8 +9,11 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from "embla-carousel-autoplay";
 import { useEffect, useState, useMemo } from 'react';
 import type { Product } from '@/lib/types';
-import { getAllProducts } from '@/data/mock-products'; // Assuming getAllProducts exists
+import { getAllProducts } from '@/data/mock-products';
 import { ProductCard } from '@/components/products/product-card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const mainBannerImages = [
   { src: 'https://placehold.co/1200x500.png?text=Super+Oferta+Invierno', alt: 'Oferta de Invierno', hint: 'winter sale', title: 'GRAN LIQUIDACIÓN DE INVIERNO', description: 'Descuentos increíbles en toda la colección.' },
@@ -25,16 +28,44 @@ const categories = [
 
 export default function HomePage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [newsletterName, setNewsletterName] = useState('');
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const { toast } = useToast();
   
   useEffect(() => {
-    // Simulate fetching products - in a real app, this would be an API call
     const products = getAllProducts(); 
     setAllProducts(products);
   }, []);
 
   const featuredProducts = useMemo(() => {
-    return allProducts.filter(p => p.featured).slice(0, 8); // Show up to 8 featured products
+    return allProducts.filter(p => p.featured).slice(0, 8);
   }, [allProducts]);
+
+  const newArrivalProducts = useMemo(() => {
+    // Tomar los primeros 4-8 productos que no sean destacados, como "nuevos ingresos"
+    // O simplemente los primeros, si la lista ya está ordenada por novedad.
+    // Por ahora, tomaremos los primeros 4 productos de la lista general para simplicidad.
+    return allProducts.slice(0, 4);
+  }, [allProducts]);
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newsletterName && newsletterEmail) {
+      console.log('Newsletter signup:', { name: newsletterName, email: newsletterEmail });
+      toast({
+        title: "¡Gracias por suscribirte!",
+        description: "Recibirás nuestras últimas novedades pronto.",
+      });
+      setNewsletterName('');
+      setNewsletterEmail('');
+    } else {
+      toast({
+        title: "Error",
+        description: "Por favor, completa tu nombre y email.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-12">
@@ -123,6 +154,59 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* New Arrivals Section */}
+      {newArrivalProducts.length > 0 && (
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight text-center mb-8 mt-12">
+            NUEVOS INGRESOS
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+            {newArrivalProducts.map(product => (
+              <ProductCard key={`new-arrival-${product.id}`} product={product} minimalDisplay={true} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Newsletter Section */}
+      <section className="bg-secondary/30 py-12 px-4 rounded-lg shadow mt-12">
+        <div className="container mx-auto max-w-xl text-center">
+          <h2 className="text-2xl font-semibold tracking-tight mb-3">
+            NUESTRO NEWSLETTER
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            Inscribite para recibir nuestras últimas novedades.
+          </p>
+          <form onSubmit={handleNewsletterSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="newsletterName" className="sr-only">Nombre</Label>
+              <Input
+                id="newsletterName"
+                type="text"
+                placeholder="Nombre"
+                value={newsletterName}
+                onChange={(e) => setNewsletterName(e.target.value)}
+                className="max-w-md mx-auto"
+              />
+            </div>
+            <div>
+              <Label htmlFor="newsletterEmail" className="sr-only">Tu E-mail</Label>
+              <Input
+                id="newsletterEmail"
+                type="email"
+                placeholder="Tu E-mail"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                className="max-w-md mx-auto"
+              />
+            </div>
+            <Button type="submit" size="lg" className="w-full max-w-md mx-auto">
+              INSCRIBIRSE
+            </Button>
+          </form>
+        </div>
+      </section>
 
       {/* Placeholder for other sections from original app if needed */}
       <section className="bg-secondary/50 p-8 rounded-lg shadow mt-12">
