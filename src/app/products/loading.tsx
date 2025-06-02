@@ -6,8 +6,8 @@ export default function ProductsLoading() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Product Catalog"
-        description="Loading our wide selection of products..."
+        title="Catálogo de Productos"
+        description="Cargando nuestra amplia selección de productos..."
       />
 
       <div className="mb-6">

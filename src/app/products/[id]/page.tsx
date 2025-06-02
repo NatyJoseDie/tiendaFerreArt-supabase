@@ -12,8 +12,6 @@ import { Star, ShoppingCart, Tag, ListChecks, MessageSquare } from 'lucide-react
 import type { ProductSpecification, ProductReview as ReviewType } from '@/lib/types';
 
 export async function generateStaticParams() {
-  // In a real app, fetch all product IDs to pre-render
-  // For now, using mockProducts directly for simplicity
   const { mockProducts } = await import('@/data/mock-products');
   return mockProducts.map((product) => ({
     id: product.id,
@@ -35,7 +33,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
 
   return (
     <div className="space-y-10">
-      <PageHeader title={product.name} description={`Category: ${product.category}`} />
+      <PageHeader title={product.name} description={`Categoría: ${product.category}`} />
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
         <div>
@@ -56,7 +54,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
               
               {product.brand && (
                 <p className="text-sm">
-                  <span className="font-semibold">Brand:</span> {product.brand}
+                  <span className="font-semibold">Marca:</span> {product.brand}
                 </p>
               )}
               {product.sku && (
@@ -67,12 +65,12 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
 
               <Button size="lg" className="w-full mt-4" disabled={product.stock === 0}>
                 <ShoppingCart className="mr-2 h-5 w-5" />
-                {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
               </Button>
               
               {product.tags && product.tags.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="font-semibold text-sm mb-1">Tags:</h4>
+                  <h4 className="font-semibold text-sm mb-1">Etiquetas:</h4>
                   <div className="flex flex-wrap gap-2">
                     {product.tags.map(tag => (
                        <span key={tag} className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded-md flex items-center">
@@ -91,15 +89,15 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
 
       <Tabs defaultValue="description" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-6">
-          <TabsTrigger value="description"><ListChecks className="mr-2 h-4 w-4"/>Description</TabsTrigger>
-          <TabsTrigger value="specifications"><ListChecks className="mr-2 h-4 w-4"/>Specifications</TabsTrigger>
-          <TabsTrigger value="reviews"><MessageSquare className="mr-2 h-4 w-4"/>Reviews ({product.reviews?.length || 0})</TabsTrigger>
+          <TabsTrigger value="description"><ListChecks className="mr-2 h-4 w-4"/>Descripción</TabsTrigger>
+          <TabsTrigger value="specifications"><ListChecks className="mr-2 h-4 w-4"/>Especificaciones</TabsTrigger>
+          <TabsTrigger value="reviews"><MessageSquare className="mr-2 h-4 w-4"/>Reseñas ({product.reviews?.length || 0})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="description">
           <Card>
             <CardHeader>
-              <CardTitle>Product Details</CardTitle>
+              <CardTitle>Detalles del Producto</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm max-w-none dark:prose-invert text-foreground">
               {product.longDescription || product.description}
@@ -110,7 +108,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
         <TabsContent value="specifications">
           <Card>
             <CardHeader>
-              <CardTitle>Specifications</CardTitle>
+              <CardTitle>Especificaciones</CardTitle>
             </CardHeader>
             <CardContent>
               {product.specifications && product.specifications.length > 0 ? (
@@ -123,7 +121,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                   ))}
                 </ul>
               ) : (
-                <p className="text-muted-foreground">No specifications available for this product.</p>
+                <p className="text-muted-foreground">No hay especificaciones disponibles para este producto.</p>
               )}
             </CardContent>
           </Card>
@@ -132,7 +130,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
         <TabsContent value="reviews">
           <Card>
             <CardHeader>
-              <CardTitle>Customer Reviews</CardTitle>
+              <CardTitle>Reseñas de Clientes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {product.reviews && product.reviews.length > 0 ? (
@@ -155,7 +153,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground">No reviews yet for this product.</p>
+                <p className="text-muted-foreground">No hay reseñas para este producto todavía.</p>
               )}
             </CardContent>
           </Card>

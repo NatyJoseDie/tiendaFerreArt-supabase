@@ -22,15 +22,15 @@ export function SearchBar({ onSearch, initialTerm = '' }: SearchBarProps) {
     <form onSubmit={handleSearch} className="flex w-full items-center space-x-2">
       <Input
         type="text"
-        placeholder="Search products by name or keyword..."
+        placeholder="Buscar productos por nombre o palabra clave..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="flex-grow"
-        aria-label="Search products"
+        aria-label="Buscar productos"
       />
-      <Button type="submit" aria-label="Search">
+      <Button type="submit" aria-label="Buscar">
         <Search className="h-4 w-4 mr-2 sm:mr-0" />
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">Buscar</span>
       </Button>
     </form>
   );

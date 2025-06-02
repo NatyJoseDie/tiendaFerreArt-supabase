@@ -18,60 +18,51 @@ import type { Product } from '@/lib/types';
 interface ProductFiltersProps {
   categories: string[];
   onFilterChange: (filters: { category: string; priceRange: [number, number]; searchTerm: string }) => void;
-  products: Product[]; // Pass products to determine min/max price
+  products: Product[]; 
 }
 
 export function ProductFilters({ categories, onFilterChange, products }: ProductFiltersProps) {
   const [category, setCategory] = useState<string>('all');
-  
-  // Determine min and max price from products for slider initialization
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(1000); // Default max
-  const [priceRange, setPriceRange] = useState<[number, number]>([minPrice, maxPrice]);
+  const [maxPrice, setMaxPrice] = useState(1000);
+  const [currentPriceRange, setCurrentPriceRange] = useState<[number, number]>([minPrice, maxPrice]);
 
   useEffect(() => {
     if (products.length > 0) {
       const prices = products.map(p => p.price);
-      const currentMin = Math.min(...prices);
-      const currentMax = Math.max(...prices);
-      setMinPrice(currentMin);
-      setMaxPrice(currentMax);
-      setPriceRange([currentMin, currentMax]);
+      const min = Math.floor(Math.min(...prices));
+      const max = Math.ceil(Math.max(...prices));
+      setMinPrice(min);
+      setMaxPrice(max);
+      setCurrentPriceRange([min, max]); // Initialize slider with actual product price range
     }
   }, [products]);
   
   const handleCategoryChange = (value: string) => {
     setCategory(value);
-    // TODO: Implement actual filtering: onFilterChange({ category: value, priceRange, searchTerm });
+    onFilterChange({ category: value, priceRange: currentPriceRange, searchTerm: '' });
   };
 
-  const handlePriceChange = (newRange: [number, number]) => {
-    setPriceRange(newRange);
-     // TODO: Implement actual filtering
-  };
-  
-  const applyFilters = () => {
-    // This function would be called to trigger the actual filtering logic
-    // For now, it's a placeholder.
-    console.log("Applying filters:", { category, priceRange });
-    // onFilterChange({ category, priceRange, searchTerm }); // Assuming searchTerm comes from elsewhere
+  const handlePriceChangeCommit = (newRange: [number, number]) => {
+    setCurrentPriceRange(newRange);
+    onFilterChange({ category, priceRange: newRange, searchTerm: '' });
   };
 
 
   return (
-    <Card className="shadow-md">
+    <Card className="shadow-md sticky top-24">
       <CardHeader>
-        <CardTitle>Filter Products</CardTitle>
+        <CardTitle>Filtrar Productos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="category-select" className="mb-2 block font-medium">Category</Label>
+          <Label htmlFor="category-select" className="mb-2 block font-medium">Categoría</Label>
           <Select value={category} onValueChange={handleCategoryChange}>
             <SelectTrigger id="category-select" className="w-full">
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Seleccionar categoría" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">Todas las Categorías</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -82,25 +73,24 @@ export function ProductFilters({ categories, onFilterChange, products }: Product
         </div>
 
         <div>
-          <Label className="mb-2 block font-medium">Price Range</Label>
+          <Label className="mb-2 block font-medium">Rango de Precio</Label>
           <Slider
             min={minPrice}
             max={maxPrice}
             step={1}
-            value={priceRange}
-            onValueChange={(value) => handlePriceChange(value as [number, number])}
+            value={currentPriceRange}
+            onValueChange={(value) => setCurrentPriceRange(value as [number, number])} // Update value on drag
+            onValueCommit={handlePriceChangeCommit} // Apply filter on release
             className="my-4"
           />
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>${priceRange[0]}</span>
-            <span>${priceRange[1]}</span>
+            <span>${currentPriceRange[0]}</span>
+            <span>${currentPriceRange[1]}</span>
           </div>
         </div>
         
-        {/* In a real app, you'd call onFilterChange here or have an Apply button */}
-        {/* <Button onClick={applyFilters} className="w-full">Apply Filters</Button> */}
-        <p className="text-xs text-muted-foreground text-center">
-          Note: Filter application logic is a placeholder.
+        <p className="text-xs text-muted-foreground text-center pt-2">
+          Los filtros se aplican automáticamente al cambiar.
         </p>
       </CardContent>
     </Card>
