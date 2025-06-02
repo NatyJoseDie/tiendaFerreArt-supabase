@@ -13,14 +13,14 @@ export function TopBar() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // Indicate component has mounted and can access localStorage
+    setIsClient(true); 
     setUser(getUserFromLocalStorage());
-  }, [pathname]); // Re-check user on path change for dynamic display
+  }, [pathname]); 
 
   const showLoginLink = !user && pathname !== '/login' && !pathname.startsWith('/dashboard');
 
   return (
-    <div className="bg-muted/50 text-sm text-foreground"> {/* Changed text-muted-foreground to text-foreground */}
+    <div className="bg-foreground text-sm text-background"> {/* Fondo oscuro, texto claro */}
       <div className="container mx-auto flex h-10 items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <span className="flex items-center">

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-card backdrop-blur supports-[backdrop-filter]:bg-card/90"> {/* Fondo claro (card) */}
       <div className="container flex h-20 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-1.5">
           <Heart className="h-9 w-9 text-primary fill-primary" />
@@ -27,7 +27,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-xs font-medium text-foreground transition-colors hover:text-primary" /* Changed text-muted-foreground to text-foreground */
+              className="text-xs font-medium text-foreground transition-colors hover:text-primary" 
             >
               {link.label}
             </Link>
@@ -44,12 +44,12 @@ export function Header() {
           </div>
           <div className="flex items-center space-x-1">
             <Button variant="ghost" size="icon" aria-label="Shopping Cart" className="relative h-9 w-9">
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5 text-foreground" /> {/* Asegurar que el icono se vea */}
               <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[0.6rem] rounded-full px-1 leading-tight">
                 0
               </span>
             </Button>
-            <span className="text-xs text-foreground">$0.00</span> {/* Changed text-muted-foreground to text-foreground */}
+            <span className="text-xs text-foreground">$0.00</span> 
           </div>
         </div>
       </div>
