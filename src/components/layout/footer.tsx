@@ -1,6 +1,13 @@
+
+'use client';
+
 import Link from 'next/link';
-import { Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
+import { Phone, Mail, MapPin, Facebook, Instagram, Send, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 // Simple inline SVG for TikTok icon
 const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -11,7 +18,7 @@ const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
     viewBox="0 0 24 24"
     fill="currentColor"
     stroke="currentColor"
-    strokeWidth="0" // Adjusted for fill
+    strokeWidth="0"
     strokeLinecap="round"
     strokeLinejoin="round"
     {...props}
@@ -20,84 +27,146 @@ const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const paymentMethodsLogos = [
+  { src: 'https://placehold.co/50x30.png?text=Uala', alt: 'Ualá Bis', hint: 'uala logo' },
+  { src: 'https://placehold.co/50x30.png?text=MC', alt: 'Mastercard', hint: 'mastercard logo' },
+  { src: 'https://placehold.co/50x30.png?text=Visa', alt: 'Visa', hint: 'visa logo' },
+  { src: 'https://placehold.co/50x30.png?text=Amex', alt: 'American Express', hint: 'amex logo' },
+  { src: 'https://placehold.co/50x30.png?text=NX', alt: 'Naranja X', hint: 'naranja x logo' },
+  { src: 'https://placehold.co/50x30.png?text=Cabal', alt: 'Cabal', hint: 'cabal logo' },
+  { src: 'https://placehold.co/50x30.png?text=Maestro', alt: 'Maestro', hint: 'maestro logo' },
+  { src: 'https://placehold.co/50x30.png?text=Diners', alt: 'Diners Club', hint: 'diners club logo' },
+  { src: 'https://placehold.co/50x30.png?text=EFT', alt: 'Efectivo', hint: 'cash icon' },
+  { src: 'https://placehold.co/50x30.png?text=TR', alt: 'Transferencia', hint: 'bank transfer icon' },
+];
+
+const shippingMethodsLogos = [
+  { src: 'https://placehold.co/60x35.png?text=Correo', alt: 'Correo Argentino', hint: 'correo argentino logo' },
+  { src: 'https://placehold.co/50x35.png?text=Moto', alt: 'Moto Mensajería', hint: 'motorcycle delivery icon' },
+  { src: 'https://placehold.co/50x35.png?text=Local', alt: 'Retiro en Local', hint: 'store icon' },
+];
+
 
 export function Footer() {
-  const navLinks = [
-    { href: '/', label: 'Inicio' },
-    { href: '/how-to-buy', label: 'Cómo Comprar' },
-    { href: '/products', label: 'Productos' },
-    { href: '/wholesale-register', label: 'Registro Mayorista' },
-    { href: '/retail-store', label: 'Tienda Minorista' },
-  ];
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const { toast } = useToast();
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newsletterEmail) {
+      console.log('Newsletter signup (footer):', { email: newsletterEmail });
+      toast({
+        title: "¡Gracias por suscribirte!",
+        description: "Recibirás nuestras últimas novedades pronto.",
+      });
+      setNewsletterEmail('');
+    } else {
+      toast({
+        title: "Error",
+        description: "Por favor, completa tu email.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
-    <footer className="border-t bg-muted/20 pt-12 pb-8 mt-12 text-sm">
+    <footer className="border-t bg-muted/20 pt-10 pb-8 mt-12 text-sm">
       <div className="container">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          {/* Navegación */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Navegación</h3>
-            <ul className="space-y-2">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Medios de Pago */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Medios de Pago</h3>
-            <div className="flex items-center space-x-2">
-              <Image 
-                src="https://placehold.co/120x50.png?text=MercadoPago" 
-                alt="Mercado Pago" 
-                width={100} 
-                height={40} 
-                className="object-contain"
-                data-ai-hint="mercadopago logo"
-              />
-              {/* Puedes agregar más logos de medios de pago aquí */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
+          {/* Columna Izquierda: Medios de Pago y Envío (Ocupa más espacio) */}
+          <div className="md:col-span-7 lg:col-span-8 space-y-6">
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Medios de Pago</h3>
+              <div className="flex flex-wrap gap-2 items-center">
+                {paymentMethodsLogos.map((logo) => (
+                  <Image
+                    key={logo.alt}
+                    src={logo.src}
+                    alt={logo.alt}
+                    width={logo.alt === 'Ualá Bis' ? 60 : 50} // Uala logo is wider in example
+                    height={30}
+                    className="object-contain h-[30px]"
+                    data-ai-hint={logo.hint}
+                  />
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Medios de Envío</h3>
+              <div className="flex flex-wrap gap-3 items-center">
+                {shippingMethodsLogos.map((logo) => (
+                  <Image
+                    key={logo.alt}
+                    src={logo.src}
+                    alt={logo.alt}
+                    width={logo.alt === 'Correo Argentino' ? 70 : 50}
+                    height={35}
+                    className="object-contain h-[35px]"
+                    data-ai-hint={logo.hint}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Contactanos */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Contactanos</h3>
-            <ul className="space-y-2 text-muted-foreground">
-              <li className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 text-primary" />
-                <span>1139587201</span>
-              </li>
-              <li className="flex items-center">
-                <Mail className="h-4 w-4 mr-2 text-primary" />
-                <a href="mailto:distriferreart@gmail.com" className="hover:text-primary transition-colors">
-                  distriferreart@gmail.com
-                </a>
-              </li>
-              <li className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2 text-primary" />
-                <span>Florencio Varela</span>
-              </li>
-            </ul>
-          </div>
-          
-          {/* Redes Sociales */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Redes Sociales</h3>
-            <div className="flex space-x-3">
-              <Link href="#" aria-label="Facebook" className="text-muted-foreground hover:text-primary transition-colors">
-                <Facebook className="h-6 w-6" />
-              </Link>
-              <Link href="#" aria-label="Instagram" className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-6 w-6" />
-              </Link>
-              <Link href="#" aria-label="TikTok" className="text-muted-foreground hover:text-primary transition-colors">
-                <TikTokIcon className="h-6 w-6" />
-              </Link>
+          {/* Columna Derecha: Redes, Contacto, Newsletter */}
+          <div className="md:col-span-5 lg:col-span-4 space-y-6">
+            <div>
+              <h3 className="font-semibold text-foreground mb-2 uppercase tracking-wider">Nuestras Redes Sociales</h3>
+              <div className="flex space-x-3">
+                <Link href="#" aria-label="Facebook" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Facebook className="h-6 w-6" />
+                </Link>
+                <Link href="#" aria-label="Instagram" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Instagram className="h-6 w-6" />
+                </Link>
+                <Link href="#" aria-label="TikTok" className="text-muted-foreground hover:text-primary transition-colors">
+                  <TikTokIcon className="h-6 w-6" />
+                </Link>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-foreground mb-2 uppercase tracking-wider">Contacto</h3>
+              <ul className="space-y-1.5 text-muted-foreground">
+                <li className="flex items-center">
+                  <Mail className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                  <a href="mailto:distriferreart@gmail.com" className="hover:text-primary transition-colors break-all">
+                    distriferreart@gmail.com
+                  </a>
+                </li>
+                <li className="flex items-center">
+                  <Phone className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                  <span>1139587201</span>
+                </li>
+                <li className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
+                  <span>Florencio Varela</span>
+                </li>
+                <li className="flex items-center">
+                  <ChevronRight className="h-4 w-4 mr-1 text-primary flex-shrink-0" />
+                  <Link href="/refund-policy" className="hover:text-primary transition-colors">
+                    Botón de arrepentimiento
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-foreground mb-2 uppercase tracking-wider">Newsletter</h3>
+              <form onSubmit={handleNewsletterSubmit} className="flex items-center gap-2">
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  className="flex-grow h-10 bg-background"
+                  aria-label="Email para newsletter"
+                />
+                <Button type="submit" className="bg-foreground text-background hover:bg-foreground/80 h-10 px-4">
+                  SUSCRIBIRME
+                </Button>
+              </form>
             </div>
           </div>
         </div>
