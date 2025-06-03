@@ -12,26 +12,37 @@ import type { Product } from '@/lib/types';
 import { Camera, Edit, Percent } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StockStatusBadge } from '@/components/products/StockStatusBadge';
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+const PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY = 'shopvision_overridden_final_prices';
 const DEFAULT_MARGIN = 45;
 
 export default function CatalogoVendedoraPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [margenFinal, setMargenFinal] = useState<number>(DEFAULT_MARGIN);
+  const [overriddenFinalPrices, setOverriddenFinalPrices] = useState<{ [productId: string]: number }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname(); // Get the current pathname
 
   useEffect(() => {
     setIsLoading(true);
+    
+    // Load global margin
     const storedMargin = localStorage.getItem(FINAL_CONSUMER_MARGIN_KEY);
     if (storedMargin) {
       const parsedMargin = parseFloat(storedMargin);
       if (!isNaN(parsedMargin)) {
         setMargenFinal(parsedMargin);
+      } else {
+        setMargenFinal(DEFAULT_MARGIN);
       }
+    } else {
+      setMargenFinal(DEFAULT_MARGIN);
     }
 
+    // Load master product list
     const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     let productData;
     if (masterProductList) {
@@ -45,8 +56,14 @@ export default function CatalogoVendedoraPage() {
       productData = getAllProducts();
     }
     setProducts(productData);
+
+    // Load overridden prices
+    const storedOverriddenPrices = localStorage.getItem(PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY);
+    const loadedOverriddenPrices = storedOverriddenPrices ? JSON.parse(storedOverriddenPrices) : {};
+    setOverriddenFinalPrices(loadedOverriddenPrices);
+
     setIsLoading(false);
-  }, []);
+  }, [pathname]); // Add pathname to dependency array
 
   useEffect(() => {
     // Save margin to localStorage whenever it changes, if not loading
@@ -117,14 +134,14 @@ export default function CatalogoVendedoraPage() {
             Catálogo con Precios de Venta al Público
           </CardTitle>
            <CardDescription>
-            Define tu margen de ganancia para el consumidor final. Este margen afectará a este catálogo y al Catálogo Público. El ajuste se realiza en la sección &quot;Consumidor Final&quot;.
+            Define tu margen de ganancia para el consumidor final. Este margen afectará a este catálogo y al Catálogo Público. El ajuste se realiza en la sección &quot;Consumidor Final&quot; o aquí mismo para el margen global.
           </CardDescription>
         </CardHeader>
         <CardContent>
            <div className="mb-6 p-4 border rounded-lg bg-muted/30 max-w-md">
             <Label htmlFor="margen-final-catalogo" className="text-sm font-medium block mb-1">
               <Edit className="inline-block mr-1 h-4 w-4" />
-              Tu margen de ganancia para Consumidor Final (%):
+              Tu margen de ganancia GLOBAL para Consumidor Final (%):
             </Label>
             <div className="flex items-center space-x-2 mt-1">
               <Input
@@ -139,14 +156,19 @@ export default function CatalogoVendedoraPage() {
               <Percent className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Este margen se aplicará a los precios base para calcular los precios de venta al público y se reflejará aquí y en el Catálogo Público.
+              Este margen global se aplicará si no hay un precio individual definido en "Lista de Precios para Consumidor Final".
             </p>
           </div>
 
           {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => {
-                const finalPrice = product.price * (1 + margenFinal / 100);
+                const overriddenPrice = overriddenFinalPrices[product.id];
+                const finalPrice = overriddenPrice !== undefined
+                                    ? overriddenPrice
+                                    : product.price * (1 + margenFinal / 100);
+                const isManuallyOverridden = overriddenPrice !== undefined;
+
                 const imageSrc = product.images && product.images.length > 0 ? product.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
                 const imageHint = imageSrc.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
                 
@@ -170,9 +192,10 @@ export default function CatalogoVendedoraPage() {
                       <p className="text-lg font-semibold text-primary catalog-price">
                         ${finalPrice.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
-                      {margenFinal > 0 && ( 
+                      {(isManuallyOverridden || margenFinal > 0) && ( 
                         <p className="text-xs text-muted-foreground mt-1">
                           Precio base: ${product.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {isManuallyOverridden && <span className="italic"> (precio individual)</span>}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground catalog-category mt-1">{product.category}</p>
