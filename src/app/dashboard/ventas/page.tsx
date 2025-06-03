@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAllProducts, type Product } from '@/data/mock-products';
 import { BarChart2, DollarSign, CalendarDays, PlusCircle, User, CreditCard, FileSpreadsheet, FileText, Upload, StickyNote, FileSignature } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 const saleFormSchema = z.object({
   productId: z.string().min(1, { message: 'Debe seleccionar un producto.' }),
@@ -49,6 +50,7 @@ const paymentMethods = [
 ];
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
+const PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY = 'shopvision_overridden_final_prices';
 const SALES_CONSUMER_FINAL_STORAGE_KEY = 'shopvision_sales_consumer_final';
 const DEFAULT_FINAL_CONSUMER_MARGIN = 45; // 45%
 
@@ -58,8 +60,9 @@ export default function VentasConsumidorFinalPage() {
   const [selectedProductCost, setSelectedProductCost] = useState<number>(0);
   const [calculatedGain, setCalculatedGain] = useState<number>(0);
   const [finalConsumerMargin, setFinalConsumerMargin] = useState<number>(DEFAULT_FINAL_CONSUMER_MARGIN);
-
-
+  const [overriddenFinalPrices, setOverriddenFinalPrices] = useState<{ [productId: string]: number }>({});
+  
+  const pathname = usePathname(); // For re-fetching data on navigation
   const { toast } = useToast();
 
   const form = useForm<SaleFormValues>({
@@ -77,6 +80,7 @@ export default function VentasConsumidorFinalPage() {
   });
 
   useEffect(() => {
+    // Load all necessary data from localStorage
     const masterProductList = localStorage.getItem('masterProductList');
     let productData;
     if (masterProductList) {
@@ -103,7 +107,12 @@ export default function VentasConsumidorFinalPage() {
         setFinalConsumerMargin(parsedMargin);
       }
     }
-  }, []);
+    
+    const storedOverriddenPrices = localStorage.getItem(PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY);
+    const loadedOverriddenPrices = storedOverriddenPrices ? JSON.parse(storedOverriddenPrices) : {};
+    setOverriddenFinalPrices(loadedOverriddenPrices);
+
+  }, [pathname]); // Re-fetch if pathname changes
 
   useEffect(() => {
     localStorage.setItem(SALES_CONSUMER_FINAL_STORAGE_KEY, JSON.stringify(sales));
@@ -117,8 +126,19 @@ export default function VentasConsumidorFinalPage() {
     if (watchedProductId && productsList.length > 0) {
       const product = productsList.find(p => p.id === watchedProductId);
       if (product) {
-        setSelectedProductCost(product.price);
-        const suggestedSalePrice = product.price * (1 + finalConsumerMargin / 100);
+        setSelectedProductCost(product.price); // This is the base cost
+        
+        // Check for an overridden final price for this product
+        const overriddenPrice = overriddenFinalPrices[product.id];
+        let suggestedSalePrice;
+
+        if (overriddenPrice !== undefined) {
+          suggestedSalePrice = overriddenPrice;
+        } else {
+          // Calculate using global margin if no override exists
+          suggestedSalePrice = product.price * (1 + finalConsumerMargin / 100);
+        }
+        
         form.setValue('salePrice', parseFloat(suggestedSalePrice.toFixed(2)));
       } else {
         setSelectedProductCost(0);
@@ -126,17 +146,17 @@ export default function VentasConsumidorFinalPage() {
       }
     } else {
       setSelectedProductCost(0);
-       if (!watchedProductId) { // Reset salePrice if no product is selected
+       if (!watchedProductId) { 
         form.setValue('salePrice', 0);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedProductId, productsList, finalConsumerMargin]); // form not needed to avoid re-runs
+  }, [watchedProductId, productsList, finalConsumerMargin, overriddenFinalPrices]); // form not needed
 
   useEffect(() => {
     const quantity = Number(watchedQuantity) || 0;
-    const salePrice = Number(watchedSalePrice) || 0;
-    const cost = Number(selectedProductCost) || 0;
+    const salePrice = Number(watchedSalePrice) || 0; // This is the actual sale price entered/suggested
+    const cost = Number(selectedProductCost) || 0; // This is the base cost of the product
     
     const gain = (salePrice - cost) * quantity;
     setCalculatedGain(isNaN(gain) ? 0 : gain);
@@ -154,7 +174,7 @@ export default function VentasConsumidorFinalPage() {
       ...data,
       id: Date.now().toString(), 
       productName: product.name,
-      costPrice: product.price,
+      costPrice: product.price, // Base cost
       totalGain: (data.salePrice - product.price) * data.quantity,
     };
 
