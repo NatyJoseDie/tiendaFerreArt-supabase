@@ -24,6 +24,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -53,14 +63,20 @@ export default function ListaCostosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  
+  const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
     // TEMPORARY CHANGE: Always load from getAllProducts() to bypass localStorage for verification
-    const loadedProducts: Product[] = getAllProducts();
+    const loadedProductsFromSource: Product[] = getAllProducts();
     
-    // Original logic for localStorage (commented out for now):
+    // Attempt to load from localStorage for edits, but prioritize the source for initial state if it's a temporary verification phase.
+    // For now, we are in verification phase, so `loadedProductsFromSource` is used.
+    // If we were to revert, the logic would be:
     // const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
     // let loadedProducts: Product[];
     // if (storedProducts) {
@@ -73,9 +89,11 @@ export default function ListaCostosPage() {
     // } else {
     //   loadedProducts = getAllProducts();
     // }
-    setProductos(loadedProducts);
+    // setProductos(loadedProducts);
+
+    setProductos(loadedProductsFromSource);
     const categories = Array.from(
-      new Set(loadedProducts.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
+      new Set(loadedProductsFromSource.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
     ).sort();
     setProductCategories(categories);
     setIsLoading(false);
@@ -83,7 +101,7 @@ export default function ListaCostosPage() {
 
   useEffect(() => {
     if (!isLoading) {
-        // Still save to localStorage so new additions/edits persist if we revert the temporary change
+        // Still save to localStorage so new additions/edits persist IF we revert the temporary source loading
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
         const categories = Array.from(
           new Set(productos.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
@@ -137,16 +155,20 @@ export default function ListaCostosPage() {
     let imageUrl = form.currentImageUrl || (editId ? productos.find(p => p.id === editId)?.images[0] : '');
     
     if (form.imageFile) {
-      const uploadingToast = toast({ title: "Subiendo imagen...", description: "Por favor espera.", duration: Infinity });
+      const { id: uploadingToastId, dismiss: dismissUploadingToast } = toast({ 
+        title: "Subiendo imagen...", 
+        description: "Por favor espera.", 
+        duration: Infinity // Prevent auto-dismiss
+      });
       try {
         const imageRef = ref(storage, `product_images/${Date.now()}_${form.imageFile.name}`);
         await uploadBytes(imageRef, form.imageFile);
         imageUrl = await getDownloadURL(imageRef);
-        uploadingToast.dismiss();
+        dismissUploadingToast();
         toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
       } catch (error: any) {
         console.error("Error uploading image: ", error);
-        uploadingToast.dismiss(); 
+        dismissUploadingToast();
         toast({ 
           title: "Error de subida de imagen", 
           description: `No se pudo subir la imagen. ${error.message || 'Intenta de nuevo.'}`, 
@@ -155,7 +177,7 @@ export default function ListaCostosPage() {
         setIsSubmitting(false);
         return; 
       }
-    } else if (!imageUrl && !editId) { // For new products without a file, ensure there's at least a placeholder
+    } else if (!imageUrl && !editId) {
         imageUrl = `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`;
     }
     
@@ -164,8 +186,8 @@ export default function ListaCostosPage() {
       price: priceAsNumber,
       category: form.category,
       stock: stockAsNumber,
-      description: `Descripción de ${form.name}`, // Default description
-      images: imageUrl ? [imageUrl] : (editId ? [] : [`https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`]), // Handle existing images if any
+      description: `Descripción de ${form.name}`,
+      images: imageUrl ? [imageUrl] : (editId ? [] : [`https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`]),
     };
 
     if (editId) {
@@ -178,7 +200,7 @@ export default function ListaCostosPage() {
       const newProduct: Product = {
         id: newId,
         ...productData,
-        longDescription: productData.description, // Default long description
+        longDescription: productData.description,
         currency: '$',
         featured: false,
         sku: `SKU-${newId}`,
@@ -208,15 +230,29 @@ export default function ListaCostosPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setProductos(productos.filter(p => p.id !== id));
-    if (editId === id) {
-      resetForm();
-    }
-    toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
+  const handleDeleteInitiation = (id: string) => {
+    setProductToDeleteId(id);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleCancel = () => {
+  const confirmDelete = () => {
+    if (productToDeleteId) {
+      setProductos(prevProductos => prevProductos.filter(p => p.id !== productToDeleteId));
+      toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
+      if (editId === productToDeleteId) {
+        resetForm();
+      }
+    }
+    setProductToDeleteId(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const cancelDelete = () => {
+    setProductToDeleteId(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleCancelEdit = () => {
     resetForm();
   };
 
@@ -308,7 +344,7 @@ export default function ListaCostosPage() {
                 {isSubmitting ? (editId ? "Guardando..." : "Agregando...") : (editId ? "Guardar Cambios" : "Agregar Producto")}
               </Button>
               {editId && (
-                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
                   Cancelar Edición
                 </Button>
               )}
@@ -374,7 +410,7 @@ export default function ListaCostosPage() {
                           <TableCell>{producto.id}</TableCell>
                           <TableCell>
                             {producto.images && producto.images[0] ? (
-                              <Image src={producto.images[0]} alt={producto.name} width={40} height={40} className="rounded object-cover aspect-square" data-ai-hint={producto.category.toLowerCase() + " product"} onError={(e) => e.currentTarget.src = 'https://placehold.co/40x40.png?text=Error'}/>
+                              <Image src={producto.images[0]} alt={producto.name} width={40} height={40} className="rounded object-cover aspect-square" data-ai-hint={(producto.category || 'product').toLowerCase() + " " + producto.name.split(" ")[0].toLowerCase()} onError={(e) => e.currentTarget.src = 'https://placehold.co/40x40.png?text=Error'}/>
                             ) : (
                               <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
@@ -399,7 +435,7 @@ export default function ListaCostosPage() {
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmitting}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmitting}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteInitiation(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmitting}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -419,6 +455,30 @@ export default function ListaCostosPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) {
+          setProductToDeleteId(null); // Limpia el ID si el diálogo se cierra externamente
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Eliminación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar el producto "{productToDeleteId ? productos.find(p => p.id === productToDeleteId)?.name : ''}"?
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Sí, eliminar producto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
