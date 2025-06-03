@@ -59,7 +59,6 @@ const userProducts: {id: number; nombre: string; costo: number; categoria: strin
     {id: 48, nombre: "Lampara silicona panda", costo: 8900, categoria: "iluminacion"}, // Updated category
     {id: 49, nombre: "Lampara animalitos", costo: 7500, categoria: "iluminacion"}, // Updated category
     {id: 50, nombre: "Auricular inalambrico M26", costo: 6000, categoria: "auricular"},
-    // New products will be added below by the script
 ];
 
 const newProductsRaw = `
@@ -77,7 +76,7 @@ Touch 60 pc doble punta: $10.500
 Touch 80 pc doble punta: $15.000
 Espejo con luces led usb y a pila: $5.500
 Convector electrico 2000w Con termostato regulable: $40.900
-Convector electrico 2000w Con termostato regulable (Outlet): $38.900 
+Convector electrico 2000w Con termostato regulable (Outlet): $38.900
 Balanza digital hasta 180k: $8.999
 Repetidor wifi: $12.000
 Soporte de tv movil hasta 55": $7.900
@@ -189,43 +188,43 @@ lines.forEach(line => {
       return; // Skip if price cannot be parsed
     }
   }
-  
-  // Ensure name is unique before attempting to add a suffix for very similar items
+
   let finalName = nombre;
   if (existingProductNames.has(finalName.toLowerCase())) {
-      // Try to make it unique if it's a very common pattern like the convectors
       if (finalName.toLowerCase().includes("convector electrico 2000w con termostato regulable") && costo === 38900) {
           finalName = "Convector electrico 2000w Con termostato regulable (Outlet)";
       } else if (finalName.toLowerCase().includes("freidora de aire 7 lts") && costo === 87999) {
-          finalName = "Freidora de aire 7 Lts (Alternativa)";
+          finalName = "Freidora de aire 7 Lts (Alternativa)"; // Example, adjust as needed
       } else {
-        skippedProducts.push(nombre + " (Already exists)");
-        return; // Skip if already exists and not a known variant
+        // Check against original userProducts again, as finalName might have changed
+        if (userProducts.some(up => up.nombre.trim().toLowerCase() === nombre.trim().toLowerCase())) {
+            skippedProducts.push(nombre + " (Already in original list)");
+            return;
+        }
       }
   }
 
-
-  if (!existingProductNames.has(finalName.trim().toLowerCase())) {
+  // Check if the (potentially modified) finalName is already in the products to be added or existing ones
+  if (!productsToAdd.some(pta => pta.nombre.trim().toLowerCase() === finalName.trim().toLowerCase()) &&
+      !userProducts.some(up => up.nombre.trim().toLowerCase() === finalName.trim().toLowerCase())) {
     maxId++;
     const categoria = inferCategory(finalName);
     productsToAdd.push({ id: maxId, nombre: finalName, costo, categoria });
-    existingProductNames.add(finalName.trim().toLowerCase()); // Add to set to prevent duplicates from the new list itself
   } else {
-     skippedProducts.push(nombre + " (Already exists or duplicate in new list)");
+     skippedProducts.push(nombre + " (Duplicate in new list or already exists with same final name)");
   }
 });
 
-console.log("Skipped products due to duplication:", skippedProducts);
 userProducts.push(...productsToAdd);
 
 export const mockProducts: Product[] = userProducts.map((p) => {
   const nameParts = p.nombre.split(' ');
-  // Basic placeholder hint generation
-  let hintKeywords = product.category.toLowerCase(); // Start with category
+  // Basic placeholder hint generation (was causing an error previously)
+  let hintKeywords = p.category.toLowerCase(); // Use p.category
   if (nameParts.length > 0) {
-    hintKeywords += " " + nameParts[0].toLowerCase(); // Add first word of product name
+    hintKeywords += " " + nameParts[0].toLowerCase();
   }
-  
+
   const defaultImage = `https://placehold.co/600x400.png?text=${encodeURIComponent(p.nombre)}`;
   const defaultImage2 = `https://placehold.co/600x400.png?text=${encodeURIComponent(p.nombre)}+view2`;
 
@@ -238,8 +237,8 @@ export const mockProducts: Product[] = userProducts.map((p) => {
     currency: '$',
     category: p.categoria.charAt(0).toUpperCase() + p.categoria.slice(1),
     images: [defaultImage, defaultImage2],
-    stock: 5, 
-    featured: p.id % 7 === 0, // Adjust featured logic if needed
+    stock: 5,
+    featured: p.id % 7 === 0,
     brand: 'Marca Ejemplo',
     sku: generateSku(p.categoria, p.id.toString()),
     tags: [p.categoria.toLowerCase(), nameParts[0].toLowerCase(), ...(nameParts.length > 1 ? [nameParts[1].toLowerCase()] : [])].filter(tag => tag),
@@ -250,12 +249,6 @@ export const mockProducts: Product[] = userProducts.map((p) => {
     reviews: [] as ProductReview[],
   };
 });
-
-// This part of the code that adds data-ai-hint to image URLs seems to be missing in the original file.
-// Adding it here if it's intended to be part of the mockProducts generation.
-// However, the data-ai-hint logic for placeholders is usually handled where the Image component is used.
-// For mock data generation, it's better to ensure the image URL itself doesn't contain it unless specifically for testing that.
-// The `ProductCard` and other components should add `data-ai-hint` attribute to the `next/image` component.
 
 export const getProductById = (id: string): Product | undefined => {
   return mockProducts.find(product => product.id === id);
@@ -274,9 +267,11 @@ export const getCategories = (): string[] => {
   return Array.from(categories).sort();
 };
 
-// Log final product count
 console.log(`Total products after additions: ${userProducts.length}`);
 console.log(`Last product ID: ${maxId}`);
-// To see the list of added products:
+if (skippedProducts.length > 0) {
+    console.warn("Skipped products due to duplication or being already present:", skippedProducts);
+}
 // console.log("Newly added products:", productsToAdd.map(p => `${p.id}: ${p.nombre} (${p.categoria}) - $${p.costo}`).join('\n'));
-
+// console.log("Full product list for verification:", userProducts.map(p => `${p.id}: ${p.nombre}`).join('\n'));
+    
