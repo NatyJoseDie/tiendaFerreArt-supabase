@@ -57,18 +57,22 @@ export default function ListaCostosPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
-    let loadedProducts: Product[];
-    if (storedProducts) {
-      try {
-        loadedProducts = JSON.parse(storedProducts);
-      } catch (error) {
-        console.error("Error parsing masterProductList from localStorage", error);
-        loadedProducts = getAllProducts(); 
-      }
-    } else {
-      loadedProducts = getAllProducts();
-    }
+    // TEMPORARY CHANGE: Always load from getAllProducts() to bypass localStorage for verification
+    const loadedProducts: Product[] = getAllProducts();
+    
+    // Original logic for localStorage (commented out for now):
+    // const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
+    // let loadedProducts: Product[];
+    // if (storedProducts) {
+    //   try {
+    //     loadedProducts = JSON.parse(storedProducts);
+    //   } catch (error) {
+    //     console.error("Error parsing masterProductList from localStorage", error);
+    //     loadedProducts = getAllProducts(); 
+    //   }
+    // } else {
+    //   loadedProducts = getAllProducts();
+    // }
     setProductos(loadedProducts);
     const categories = Array.from(
       new Set(loadedProducts.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
@@ -79,6 +83,7 @@ export default function ListaCostosPage() {
 
   useEffect(() => {
     if (!isLoading) {
+        // Still save to localStorage so new additions/edits persist if we revert the temporary change
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
         const categories = Array.from(
           new Set(productos.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
@@ -132,16 +137,16 @@ export default function ListaCostosPage() {
     let imageUrl = form.currentImageUrl || (editId ? productos.find(p => p.id === editId)?.images[0] : '');
     
     if (form.imageFile) {
-      const uploadingToastId = toast({ title: "Subiendo imagen...", description: "Por favor espera.", duration: Infinity });
+      const uploadingToast = toast({ title: "Subiendo imagen...", description: "Por favor espera.", duration: Infinity });
       try {
         const imageRef = ref(storage, `product_images/${Date.now()}_${form.imageFile.name}`);
         await uploadBytes(imageRef, form.imageFile);
         imageUrl = await getDownloadURL(imageRef);
-        uploadingToastId.dismiss();
+        uploadingToast.dismiss();
         toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
       } catch (error: any) {
         console.error("Error uploading image: ", error);
-        uploadingToastId.dismiss(); 
+        uploadingToast.dismiss(); 
         toast({ 
           title: "Error de subida de imagen", 
           description: `No se pudo subir la imagen. ${error.message || 'Intenta de nuevo.'}`, 
@@ -417,4 +422,5 @@ export default function ListaCostosPage() {
     </div>
   );
 }
-
+    
+    
