@@ -220,7 +220,7 @@ userProducts.push(...productsToAdd);
 export const mockProducts: Product[] = userProducts.map((p) => {
   const nameParts = p.nombre.split(' ');
   // Basic placeholder hint generation (was causing an error previously)
-  let hintKeywords = p.category.toLowerCase(); // Use p.category
+  let hintKeywords = (p.category || '').toLowerCase(); // Use p.category and provide fallback
   if (nameParts.length > 0) {
     hintKeywords += " " + nameParts[0].toLowerCase();
   }
@@ -235,13 +235,17 @@ export const mockProducts: Product[] = userProducts.map((p) => {
     longDescription: `Una descripción más larga y completa sobre ${p.nombre}, sus características principales, usos y beneficios. Perfecto para quienes buscan calidad en ${p.categoria}.`,
     price: p.costo,
     currency: '$',
-    category: p.categoria.charAt(0).toUpperCase() + p.categoria.slice(1),
+    category: p.categoria ? p.categoria.charAt(0).toUpperCase() + p.categoria.slice(1) : 'Sin Categoría',
     images: [defaultImage, defaultImage2],
     stock: 5,
     featured: p.id % 7 === 0,
     brand: 'Marca Ejemplo',
-    sku: generateSku(p.categoria, p.id.toString()),
-    tags: [p.categoria.toLowerCase(), nameParts[0].toLowerCase(), ...(nameParts.length > 1 ? [nameParts[1].toLowerCase()] : [])].filter(tag => tag),
+    sku: generateSku(p.categoria || 'UNCAT', p.id.toString()),
+    tags: [
+        (p.category || 'general').toLowerCase(),
+        nameParts[0]?.toLowerCase(),
+        nameParts[1]?.toLowerCase()
+    ].filter(tag => tag) as string[],
     specifications: [
         { key: 'Material', value: 'Material de ejemplo' },
         { key: 'Origen', value: 'Origen de ejemplo' },
@@ -263,8 +267,8 @@ export const getAllProducts = (): Product[] => {
 };
 
 export const getCategories = (): string[] => {
-  const categories = new Set(mockProducts.map(p => p.category));
-  return Array.from(categories).sort();
+  const categories = new Set(mockProducts.map(p => p.category).filter(Boolean)); // Filter out undefined/null categories
+  return Array.from(categories as Set<string>).sort();
 };
 
 console.log(`Total products after additions: ${userProducts.length}`);
