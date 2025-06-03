@@ -41,31 +41,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { storage } from '@/lib/firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
+import { EditProductModal } from '@/components/products/edit-product-modal';
 
 
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
 const LOW_STOCK_THRESHOLD = 5;
 
-interface FormState {
+interface AddFormState {
   name: string;
   price: string;
   category: string;
   stock: string;
   imageFile: File | null;
-  currentImageUrl: string;
 }
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [form, setForm] = useState<FormState>({ name: "", price: "", category: "", stock: "5", imageFile: null, currentImageUrl: '' });
-  const [editId, setEditId] = useState<string | null>(null);
+  // Form state for adding new products
+  const [addForm, setAddForm] = useState<AddFormState>({ name: "", price: "", category: "", stock: "5", imageFile: null });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); // For adding new product
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
+  // States for Delete Dialog
   const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // States for Edit Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentProductToEdit, setCurrentProductToEdit] = useState<Product | null>(null);
 
   const { toast } = useToast();
 
@@ -74,23 +79,6 @@ export default function ListaCostosPage() {
     // TEMPORARY CHANGE: Always load from getAllProducts() to bypass localStorage for verification
     const loadedProductsFromSource: Product[] = getAllProducts();
     
-    // Attempt to load from localStorage for edits, but prioritize the source for initial state if it's a temporary verification phase.
-    // For now, we are in verification phase, so `loadedProductsFromSource` is used.
-    // If we were to revert, the logic would be:
-    // const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
-    // let loadedProducts: Product[];
-    // if (storedProducts) {
-    //   try {
-    //     loadedProducts = JSON.parse(storedProducts);
-    //   } catch (error) {
-    //     console.error("Error parsing masterProductList from localStorage", error);
-    //     loadedProducts = getAllProducts(); 
-    //   }
-    // } else {
-    //   loadedProducts = getAllProducts();
-    // }
-    // setProductos(loadedProducts);
-
     setProductos(loadedProductsFromSource);
     const categories = Array.from(
       new Set(loadedProductsFromSource.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
@@ -110,37 +98,37 @@ export default function ListaCostosPage() {
     }
   }, [productos, isLoading]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Handlers for Add Product Form
+  const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddForm({ ...addForm, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setForm({ ...form, imageFile: e.target.files[0] });
+      setAddForm({ ...addForm, imageFile: e.target.files[0] });
     } else {
-      setForm({ ...form, imageFile: null });
+      setAddForm({ ...addForm, imageFile: null });
     }
   };
 
-  const handleCategoryChange = (value: string) => {
-    setForm({ ...form, category: value });
+  const handleAddCategoryChange = (value: string) => {
+    setAddForm({ ...addForm, category: value });
   };
 
-  const resetForm = () => {
-    setForm({ name: "", price: "", category: "", stock: "5", imageFile: null, currentImageUrl: '' });
-    setEditId(null);
-    const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+  const resetAddForm = () => {
+    setAddForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
+    const fileInput = document.getElementById('addImageFile') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleAddSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.price || !form.category || form.stock === "") {
+    if (!addForm.name || !addForm.price || !addForm.category || addForm.stock === "") {
       toast({ title: "Error", description: "Todos los campos son requeridos, incluyendo el stock.", variant: "destructive" });
       return;
     }
-    const priceAsNumber = parseFloat(form.price);
-    const stockAsNumber = parseInt(form.stock, 10);
+    const priceAsNumber = parseFloat(addForm.price);
+    const stockAsNumber = parseInt(addForm.stock, 10);
 
     if (isNaN(priceAsNumber) || priceAsNumber < 0) {
         toast({ title: "Error", description: "El precio debe ser un número válido.", variant: "destructive" });
@@ -151,18 +139,18 @@ export default function ListaCostosPage() {
         return;
     }
     
-    setIsSubmitting(true);
-    let imageUrl = form.currentImageUrl || (editId ? productos.find(p => p.id === editId)?.images[0] : '');
+    setIsSubmittingAdd(true);
+    let imageUrl = '';
     
-    if (form.imageFile) {
+    if (addForm.imageFile) {
       const { id: uploadingToastId, dismiss: dismissUploadingToast } = toast({ 
         title: "Subiendo imagen...", 
         description: "Por favor espera.", 
-        duration: Infinity // Prevent auto-dismiss
+        duration: Infinity
       });
       try {
-        const imageRef = ref(storage, `product_images/${Date.now()}_${form.imageFile.name}`);
-        await uploadBytes(imageRef, form.imageFile);
+        const imageRef = ref(storage, `product_images/${Date.now()}_${addForm.imageFile.name}`);
+        await uploadBytes(imageRef, addForm.imageFile);
         imageUrl = await getDownloadURL(imageRef);
         dismissUploadingToast();
         toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
@@ -174,62 +162,52 @@ export default function ListaCostosPage() {
           description: `No se pudo subir la imagen. ${error.message || 'Intenta de nuevo.'}`, 
           variant: "destructive" 
         });
-        setIsSubmitting(false);
+        setIsSubmittingAdd(false);
         return; 
       }
-    } else if (!imageUrl && !editId) {
-        imageUrl = `https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`;
+    } else {
+        imageUrl = `https://placehold.co/100x100.png?text=${encodeURIComponent(addForm.name)}`;
     }
     
-    const productData = {
-      name: form.name,
+    const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id || "0", 10))) + 1).toString() : "1";
+    const newProduct: Product = {
+      id: newId,
+      name: addForm.name,
       price: priceAsNumber,
-      category: form.category,
+      category: addForm.category,
       stock: stockAsNumber,
-      description: `Descripción de ${form.name}`,
-      images: imageUrl ? [imageUrl] : (editId ? [] : [`https://placehold.co/100x100.png?text=${encodeURIComponent(form.name)}`]),
+      description: `Descripción de ${addForm.name}`, // Default description
+      longDescription: `Descripción más detallada de ${addForm.name}`, // Default long description
+      images: [imageUrl],
+      currency: '$',
+      featured: false,
+      sku: `SKU-${newId}`,
+      brand: 'Marca Ejemplo',
+      tags: [addForm.category.toLowerCase()]
     };
-
-    if (editId) {
-      setProductos(productos.map(p =>
-        p.id === editId ? { ...p, ...productData, images: productData.images.length > 0 ? productData.images : p.images } : p
-      ));
-      toast({ title: "Éxito", description: "Producto actualizado." });
-    } else {
-      const newId = productos.length ? (Math.max(...productos.map(p => parseInt(p.id || "0", 10))) + 1).toString() : "1";
-      const newProduct: Product = {
-        id: newId,
-        ...productData,
-        longDescription: productData.description,
-        currency: '$',
-        featured: false,
-        sku: `SKU-${newId}`,
-        brand: 'Marca Ejemplo',
-        tags: [form.category.toLowerCase()]
-      };
-      setProductos(prev => [...prev, newProduct]);
-      toast({ title: "Éxito", description: "Producto agregado." });
-    }
-    resetForm();
-    setIsSubmitting(false);
+    setProductos(prev => [...prev, newProduct]);
+    toast({ title: "Éxito", description: "Producto agregado." });
+    resetAddForm();
+    setIsSubmittingAdd(false);
   };
 
+  // Handlers for Edit Modal
   const handleEdit = (producto: Product) => {
-    setForm({ 
-      name: producto.name, 
-      price: producto.price.toString(), 
-      category: producto.category, 
-      stock: producto.stock.toString(),
-      imageFile: null,
-      currentImageUrl: producto.images && producto.images[0] ? producto.images[0] : ''
-    });
-    setEditId(producto.id);
-    const formElement = document.getElementById('product-form-card');
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: 'smooth' });
-    }
+    setCurrentProductToEdit(producto);
+    setIsEditModalOpen(true);
   };
 
+  const handleProductUpdateFromModal = (updatedProduct: Product) => {
+    setProductos(prevProductos => 
+      prevProductos.map(p => p.id === updatedProduct.id ? updatedProduct : p)
+    );
+    toast({ title: "Éxito", description: `Producto "${updatedProduct.name}" actualizado.` });
+    setIsEditModalOpen(false); // Close modal in parent
+    setCurrentProductToEdit(null);
+  };
+
+
+  // Handlers for Delete Dialog
   const handleDeleteInitiation = (id: string) => {
     setProductToDeleteId(id);
     setIsDeleteDialogOpen(true);
@@ -239,9 +217,6 @@ export default function ListaCostosPage() {
     if (productToDeleteId) {
       setProductos(prevProductos => prevProductos.filter(p => p.id !== productToDeleteId));
       toast({ title: "Producto eliminado", description: "El producto ha sido eliminado de la lista.", variant: "destructive" });
-      if (editId === productToDeleteId) {
-        resetForm();
-      }
     }
     setProductToDeleteId(null);
     setIsDeleteDialogOpen(false);
@@ -252,9 +227,6 @@ export default function ListaCostosPage() {
     setIsDeleteDialogOpen(false);
   };
 
-  const handleCancelEdit = () => {
-    resetForm();
-  };
 
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "all") {
@@ -294,60 +266,52 @@ export default function ListaCostosPage() {
         title="Lista de Costos Privados (Lista Madre)"
         description="Gestiona los costos, stock e imágenes de tus productos. Los cambios aquí afectarán otras secciones."
       />
-      <Card id="product-form-card" className="shadow-lg">
+      <Card id="add-product-form-card" className="shadow-lg">
         <CardHeader>
-          <CardTitle>{editId ? "Editar Producto" : "Agregar Nuevo Producto"}</CardTitle>
+          <CardTitle>Agregar Nuevo Producto</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleAddSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               <div>
-                <Label htmlFor="name">Nombre del producto</Label>
-                <Input id="name" type="text" name="name" placeholder="Ej: Termo Stanley" value={form.name} onChange={handleInputChange} required />
+                <Label htmlFor="add-name">Nombre del producto</Label>
+                <Input id="add-name" type="text" name="name" placeholder="Ej: Termo Stanley" value={addForm.name} onChange={handleAddInputChange} required />
               </div>
               <div>
-                <Label htmlFor="price">Precio costo ($)</Label>
-                <Input id="price" type="number" name="price" placeholder="Ej: 15000" value={form.price} onChange={handleInputChange} required min="0" step="0.01" />
+                <Label htmlFor="add-price">Precio costo ($)</Label>
+                <Input id="add-price" type="number" name="price" placeholder="Ej: 15000" value={addForm.price} onChange={handleAddInputChange} required min="0" step="0.01" />
               </div>
               <div>
-                <Label htmlFor="stock">Stock Disponible</Label>
-                <Input id="stock" type="number" name="stock" placeholder="Ej: 10" value={form.stock} onChange={handleInputChange} required min="0" />
+                <Label htmlFor="add-stock">Stock Disponible</Label>
+                <Input id="add-stock" type="number" name="stock" placeholder="Ej: 10" value={addForm.stock} onChange={handleAddInputChange} required min="0" />
               </div>
               <div>
-                <Label htmlFor="category-form-select">Categoría</Label>
-                 <Select name="category" value={form.category} onValueChange={handleCategoryChange} required>
-                  <SelectTrigger id="category-form-select">
+                <Label htmlFor="add-category-form-select">Categoría</Label>
+                 <Select name="category" value={addForm.category} onValueChange={handleAddCategoryChange} required>
+                  <SelectTrigger id="add-category-form-select">
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
                   <SelectContent>
                     {productCategories.filter(cat => cat && cat.trim() !== "").map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={`add-cat-${cat}`} value={cat}>{cat}</SelectItem>
                     ))}
-                     {form.category && !productCategories.includes(form.category) && (
-                        <SelectItem value={form.category} disabled>{form.category} (Nueva)</SelectItem>
+                     {addForm.category && !productCategories.includes(addForm.category) && (
+                        <SelectItem value={addForm.category} disabled>{addForm.category} (Nueva)</SelectItem>
                      )}
                   </SelectContent>
                 </Select>
               </div>
               <div className="lg:col-span-2">
-                <Label htmlFor="imageFile">Imagen del Producto</Label>
-                <Input id="imageFile" type="file" name="imageFile" accept="image/*" onChange={handleFileChange} />
-                {form.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {form.imageFile.name}</p>}
-                {!form.imageFile && form.currentImageUrl && (
-                     <p className="text-xs mt-1 text-muted-foreground">Imagen actual: <a href={form.currentImageUrl} target="_blank" rel="noopener noreferrer" className="underline">ver imagen</a> (selecciona un nuevo archivo para cambiarla)</p>
-                )}
+                <Label htmlFor="addImageFile">Imagen del Producto</Label>
+                <Input id="addImageFile" type="file" name="imageFile" accept="image/*" onChange={handleAddFileChange} />
+                {addForm.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {addForm.imageFile.name}</p>}
               </div>
             </div>
             <div className="flex space-x-2 pt-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editId ? <Edit3 className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
-                {isSubmitting ? (editId ? "Guardando..." : "Agregando...") : (editId ? "Guardar Cambios" : "Agregar Producto")}
+              <Button type="submit" disabled={isSubmittingAdd}>
+                {isSubmittingAdd ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                {isSubmittingAdd ? "Agregando..." : "Agregar Producto"}
               </Button>
-              {editId && (
-                <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSubmitting}>
-                  Cancelar Edición
-                </Button>
-              )}
             </div>
           </form>
         </CardContent>
@@ -432,10 +396,10 @@ export default function ListaCostosPage() {
                           </TableCell>
                           <TableCell>{producto.category}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmitting}>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmittingAdd /* Disable edit while add is submitting too */}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteInitiation(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmitting}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteInitiation(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmittingAdd}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -457,10 +421,8 @@ export default function ListaCostosPage() {
       </Card>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        setIsDeleteDialogOpen(open);
-        if (!open) {
-          setProductToDeleteId(null); // Limpia el ID si el diálogo se cierra externamente
-        }
+        if (!open) cancelDelete(); // Ensure state is reset if closed externally
+        else setIsDeleteDialogOpen(true);
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -479,8 +441,18 @@ export default function ListaCostosPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {currentProductToEdit && (
+        <EditProductModal
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          productToEdit={currentProductToEdit}
+          onProductUpdate={handleProductUpdateFromModal}
+          productCategories={productCategories}
+        />
+      )}
+
     </div>
   );
 }
-    
+
     
