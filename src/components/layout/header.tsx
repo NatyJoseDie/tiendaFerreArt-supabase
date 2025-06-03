@@ -23,8 +23,6 @@ export function Header() {
     { href: '/', label: 'INICIO' },
     { href: '/how-to-buy', label: 'CÓMO COMPRAR' },
     { href: '/products', label: 'PRODUCTOS' },
-    // { href: '/wholesale-register', label: 'REGISTRO MAYORISTA' }, // Removed
-    // { href: '/retail-store', label: 'TIENDA MINORISTA' }, // Removed
   ];
 
   return (
@@ -47,8 +45,8 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          {/* Conditional Login/Register Links */}
-          {isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard') && (
+          {/* Conditional Login/Register Links - Modified condition */}
+          {isClient && pathname !== '/login' && !pathname.startsWith('/dashboard') && (
             <>
               <Link
                 href="/login"
