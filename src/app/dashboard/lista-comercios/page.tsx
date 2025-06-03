@@ -11,13 +11,16 @@ import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { ShoppingBag, Info, FileSpreadsheet, FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 export default function ListaComerciosPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const pathname = usePathname(); // Get current pathname
 
   useEffect(() => {
+    setIsLoading(true);
     const masterProductList = localStorage.getItem('masterProductList');
     if (masterProductList) {
       try {
@@ -30,7 +33,7 @@ export default function ListaComerciosPage() {
       setProducts(getAllProducts());
     }
     setIsLoading(false);
-  }, []);
+  }, [pathname]); // Re-fetch data if pathname changes (e.g., navigation)
 
   const handleExportPlaceholder = (format: string) => {
     toast({

@@ -7,17 +7,21 @@ import { useEffect, useState } from 'react';
 import { getAllProducts } from '@/data/mock-products';
 import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StockStatusBadge } from '@/components/products/StockStatusBadge';
+import { usePathname } from 'next/navigation'; // Import usePathname
 
 const FINAL_CONSUMER_MARGIN_KEY = 'shopvision_finalConsumerMargin';
 const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
-const DEFAULT_MARGIN = 0; // Default margin if not found in localStorage (0 means show base price)
+const PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY = 'shopvision_overridden_final_prices';
+const DEFAULT_MARGIN = 0; 
 
 export default function CatalogoPublicoPage() {
   const [productos, setProductos] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [appliedMargin, setAppliedMargin] = useState<number>(DEFAULT_MARGIN);
+  const [overriddenFinalPrices, setOverriddenFinalPrices] = useState<{ [productId: string]: number }>({});
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsLoading(true);
@@ -26,7 +30,11 @@ export default function CatalogoPublicoPage() {
       const parsedMargin = parseFloat(storedMargin);
       if (!isNaN(parsedMargin)) {
         setAppliedMargin(parsedMargin);
+      } else {
+        setAppliedMargin(DEFAULT_MARGIN); // Fallback to default if parsing fails
       }
+    } else {
+        setAppliedMargin(DEFAULT_MARGIN); // Fallback if no margin stored
     }
 
     const masterProductList = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
@@ -42,8 +50,13 @@ export default function CatalogoPublicoPage() {
       productData = getAllProducts();
     }
     setProductos(productData);
+
+    const storedOverriddenPrices = localStorage.getItem(PRODUCT_OVERRIDDEN_FINAL_PRICES_KEY);
+    const loadedOverriddenPrices = storedOverriddenPrices ? JSON.parse(storedOverriddenPrices) : {};
+    setOverriddenFinalPrices(loadedOverriddenPrices);
+
     setIsLoading(false);
-  }, []);
+  }, [pathname]); // Depend on pathname to re-fetch data on navigation
 
   if (isLoading) {
     return (
@@ -81,17 +94,22 @@ export default function CatalogoPublicoPage() {
           data-ai-hint="company logo"
         />
         <h1>Catálogo de Productos</h1>
-        <p>Conocé nuestros productos disponibles {appliedMargin > 0 ? `(precios con ${appliedMargin}% de recargo)` : '(precios base)'}</p>
+        <p>Conocé nuestros productos disponibles {appliedMargin > 0 && Object.keys(overriddenFinalPrices).length === 0 ? `(precios con ${appliedMargin}% de recargo global)` : '(precios finales al consumidor)'}</p>
       </header>
 
       <div className="catalogo">
         {productos.map((p) => {
           const imageSrc = p.images && p.images.length > 0 ? p.images[0] : 'https://placehold.co/300x300.png?text=No+Imagen';
           const imageHint = imageSrc.includes('placehold.co') ? p.category.toLowerCase() + " " + p.name.split(" ")[0].toLowerCase() : undefined;
-          const displayPrice = p.price * (1 + appliedMargin / 100);
+          
+          const overriddenPrice = overriddenFinalPrices[p.id];
+          const displayPrice = overriddenPrice !== undefined
+                                ? overriddenPrice
+                                : p.price * (1 + appliedMargin / 100);
+          const isManuallyOverridden = overriddenPrice !== undefined;
 
           return (
-            <Card className="producto relative" key={p.id}> {/* Added relative positioning */}
+            <Card className="producto relative" key={p.id}>
               <StockStatusBadge stock={p.stock} />
               <div className="producto-img">
                 <Image
@@ -109,9 +127,10 @@ export default function CatalogoPublicoPage() {
                 <span style={{ fontSize: 12, color: "#555" }}>
                   {p.category}
                 </span>
-                 {appliedMargin > 0 && (
+                 {(isManuallyOverridden || (appliedMargin > 0 && !isManuallyOverridden)) && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Precio base: ${p.price.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {isManuallyOverridden && <span className="italic"> (precio individual)</span>}
                   </p>
                 )}
               </CardContent>
