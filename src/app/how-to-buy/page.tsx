@@ -1,7 +1,8 @@
 
+import Link from 'next/link'; // Added this line
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { List, ListItem } from '@/components/shared/list-utils'; // Assuming List and ListItem are created or exist
+import { List, ListItem } from '@/components/shared/list-utils';
 import { AlertCircle, Info, Mail, Phone, ShoppingCart, Truck, PackageCheck, RotateCcw } from 'lucide-react';
 
 export default function HowToBuyPage() {
@@ -154,5 +155,3 @@ export default function HowToBuyPage() {
     </div>
   );
 }
-
-    
