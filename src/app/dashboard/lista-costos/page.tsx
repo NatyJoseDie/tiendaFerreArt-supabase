@@ -52,6 +52,7 @@ interface AddFormState {
   name: string;
   price: string;
   category: string;
+  newCategoryName: string; // Nuevo campo
   stock: string;
   imageFile: File | null;
   featured: boolean;
@@ -59,7 +60,7 @@ interface AddFormState {
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  const [addForm, setAddForm] = useState<AddFormState>({ name: "", price: "", category: "", stock: "5", imageFile: null, featured: false });
+  const [addForm, setAddForm] = useState<AddFormState>({ name: "", price: "", category: "", newCategoryName: "", stock: "5", imageFile: null, featured: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
@@ -106,8 +107,9 @@ export default function ListaCostosPage() {
     }
   }, [productos, isLoading]);
 
-  const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAddForm({ ...addForm, [e.target.name]: e.target.value });
+  const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setAddForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +121,8 @@ export default function ListaCostosPage() {
   };
 
   const handleAddCategoryChange = (value: string) => {
-    setAddForm({ ...addForm, category: value });
+    // Si se selecciona una categoría del dropdown, limpiar el campo de nueva categoría
+    setAddForm(prev => ({ ...prev, category: value, newCategoryName: "" }));
   };
 
   const handleAddFeaturedChange = (checked: boolean) => {
@@ -127,15 +130,21 @@ export default function ListaCostosPage() {
   };
 
   const resetAddForm = () => {
-    setAddForm({ name: "", price: "", category: "", stock: "5", imageFile: null, featured: false });
+    setAddForm({ name: "", price: "", category: "", newCategoryName: "", stock: "5", imageFile: null, featured: false });
     const fileInput = document.getElementById('addImageFile') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
 
   const handleAddSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!addForm.name || !addForm.price || !addForm.category || addForm.stock === "") {
-      toast({ title: "Error", description: "Todos los campos son requeridos, incluyendo el stock.", variant: "destructive" });
+    
+    let categoryToSave = addForm.category;
+    if (addForm.newCategoryName && addForm.newCategoryName.trim() !== "") {
+      categoryToSave = addForm.newCategoryName.trim();
+    }
+
+    if (!addForm.name || !addForm.price || !categoryToSave || addForm.stock === "") {
+      toast({ title: "Error", description: "Nombre, precio, categoría y stock son requeridos.", variant: "destructive" });
       return;
     }
     const priceAsNumber = parseFloat(addForm.price);
@@ -185,7 +194,7 @@ export default function ListaCostosPage() {
       id: newId,
       name: addForm.name,
       price: priceAsNumber,
-      category: addForm.category,
+      category: categoryToSave,
       stock: stockAsNumber,
       description: `Descripción de ${addForm.name}`,
       longDescription: `Descripción más detallada de ${addForm.name}`,
@@ -194,7 +203,7 @@ export default function ListaCostosPage() {
       featured: addForm.featured,
       sku: `SKU-${newId}`,
       brand: 'Marca Ejemplo',
-      tags: [addForm.category.toLowerCase()]
+      tags: [categoryToSave.toLowerCase()]
     };
     setProductos(prev => [...prev, newProduct]);
     toast({ title: "Éxito", description: "Producto agregado." });
@@ -292,9 +301,10 @@ export default function ListaCostosPage() {
                 <Label htmlFor="add-stock">Stock Disponible</Label>
                 <Input id="add-stock" type="number" name="stock" placeholder="Ej: 10" value={addForm.stock} onChange={handleAddInputChange} required min="0" />
               </div>
+              
               <div>
-                <Label htmlFor="add-category-form-select">Categoría</Label>
-                 <Select name="category" value={addForm.category} onValueChange={handleAddCategoryChange} required>
+                <Label htmlFor="add-category-form-select">Categoría Existente</Label>
+                 <Select name="category" value={addForm.category} onValueChange={handleAddCategoryChange}>
                   <SelectTrigger id="add-category-form-select">
                     <SelectValue placeholder="Seleccionar categoría" />
                   </SelectTrigger>
@@ -302,17 +312,27 @@ export default function ListaCostosPage() {
                     {productCategories.filter(cat => cat && cat.trim() !== "").map(cat => (
                       <SelectItem key={`add-cat-${cat}`} value={cat}>{cat}</SelectItem>
                     ))}
-                     {addForm.category && !productCategories.includes(addForm.category) && (
-                        <SelectItem value={addForm.category} disabled>{addForm.category} (Nueva)</SelectItem>
-                     )}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="lg:col-span-2">
+
+              <div>
+                <Label htmlFor="add-newCategoryName">O Crear Nueva Categoría</Label>
+                <Input 
+                  id="add-newCategoryName" 
+                  name="newCategoryName" 
+                  placeholder="Ej: Electrónica Avanzada" 
+                  value={addForm.newCategoryName} 
+                  onChange={handleAddInputChange} 
+                />
+              </div>
+
+              <div className="lg:col-span-1"> {/* Ajustado para que quede bien */}
                 <Label htmlFor="addImageFile">Imagen del Producto</Label>
                 <Input id="addImageFile" type="file" name="imageFile" accept="image/*" onChange={handleAddFileChange} />
                 {addForm.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {addForm.imageFile.name}</p>}
               </div>
+
                <div className="flex items-center space-x-2 mt-2 md:col-span-1 lg:col-span-3">
                 <Checkbox
                   id="add-featured"
@@ -475,3 +495,4 @@ export default function ListaCostosPage() {
     </div>
   );
 }
+

@@ -43,6 +43,7 @@ interface EditFormState {
   name: string;
   price: string;
   category: string;
+  newCategoryName: string; // Nuevo campo
   stock: string;
   description: string;
   longDescription: string;
@@ -72,6 +73,7 @@ export function EditProductModal({
         name: productToEdit.name,
         price: productToEdit.price.toString(),
         category: productToEdit.category,
+        newCategoryName: "", // Inicializar vacío
         stock: productToEdit.stock.toString(),
         description: productToEdit.description,
         longDescription: productToEdit.longDescription || '',
@@ -89,7 +91,8 @@ export function EditProductModal({
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!formState) return;
-    setFormState({ ...formState, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormState({ ...formState, [name]: value });
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +106,8 @@ export function EditProductModal({
 
   const handleCategoryChange = (value: string) => {
     if (!formState) return;
-    setFormState({ ...formState, category: value });
+    // Si se selecciona una categoría del dropdown, limpiar el campo de nueva categoría
+    setFormState({ ...formState, category: value, newCategoryName: "" });
   };
   
   const handleTagsChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -123,7 +127,12 @@ export function EditProductModal({
       return;
     }
 
-    if (!formState.name || !formState.price || !formState.category || formState.stock === "" || !formState.description) {
+    let categoryToSave = formState.category;
+    if (formState.newCategoryName && formState.newCategoryName.trim() !== "") {
+      categoryToSave = formState.newCategoryName.trim();
+    }
+
+    if (!formState.name || !formState.price || !categoryToSave || formState.stock === "" || !formState.description) {
       toast({ title: "Error", description: "Nombre, precio, categoría, stock y descripción son requeridos.", variant: "destructive" });
       return;
     }
@@ -172,11 +181,11 @@ export function EditProductModal({
       id: formState.id,
       name: formState.name,
       price: priceAsNumber,
-      category: formState.category,
+      category: categoryToSave,
       stock: stockAsNumber,
       description: formState.description,
       longDescription: formState.longDescription,
-      images: imageUrl ? [imageUrl] : productToEdit.images,
+      images: imageUrl ? [imageUrl] : productToEdit.images, // Mantener imagen anterior si no se sube nueva
       tags: formState.tags,
       brand: formState.brand,
       sku: formState.sku,
@@ -216,20 +225,27 @@ export function EditProductModal({
               <Input id="edit-stock" name="stock" type="number" value={formState.stock} onChange={handleInputChange} required min="0" />
             </div>
             <div>
-              <Label htmlFor="edit-category">Categoría</Label>
-              <Select name="category" value={formState.category} onValueChange={handleCategoryChange} required>
-                <SelectTrigger id="edit-category">
+              <Label htmlFor="edit-category-select">Categoría Existente</Label>
+              <Select name="category" value={formState.category} onValueChange={handleCategoryChange}>
+                <SelectTrigger id="edit-category-select">
                   <SelectValue placeholder="Seleccionar categoría" />
                 </SelectTrigger>
                 <SelectContent>
                   {productCategories.map(cat => (
                     <SelectItem key={`edit-cat-${cat}`} value={cat}>{cat}</SelectItem>
                   ))}
-                  {formState.category && !productCategories.includes(formState.category) && (
-                    <SelectItem value={formState.category} disabled>{formState.category} (Nueva)</SelectItem>
-                  )}
                 </SelectContent>
               </Select>
+            </div>
+             <div>
+              <Label htmlFor="edit-newCategoryName">O Crear/Editar a Nueva Categoría</Label>
+              <Input 
+                id="edit-newCategoryName" 
+                name="newCategoryName" 
+                placeholder="Ej: Electrónica Novedosa" 
+                value={formState.newCategoryName} 
+                onChange={handleInputChange} 
+              />
             </div>
              <div>
               <Label htmlFor="edit-brand">Marca</Label>
@@ -299,3 +315,4 @@ export function EditProductModal({
     </Dialog>
   );
 }
+
