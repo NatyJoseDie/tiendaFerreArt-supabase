@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -34,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Trash2, Edit3, PlusCircle, ListFilter, Image as ImageIcon, Loader2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,22 +54,20 @@ interface AddFormState {
   category: string;
   stock: string;
   imageFile: File | null;
+  featured: boolean;
 }
 
 export default function ListaCostosPage() {
   const [productos, setProductos] = useState<Product[]>([]);
-  // Form state for adding new products
-  const [addForm, setAddForm] = useState<AddFormState>({ name: "", price: "", category: "", stock: "5", imageFile: null });
+  const [addForm, setAddForm] = useState<AddFormState>({ name: "", price: "", category: "", stock: "5", imageFile: null, featured: false });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false); // For adding new product
+  const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
-  // States for Delete Dialog
   const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // States for Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentProductToEdit, setCurrentProductToEdit] = useState<Product | null>(null);
 
@@ -76,8 +75,18 @@ export default function ListaCostosPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    // TEMPORARY CHANGE: Always load from getAllProducts() to bypass localStorage for verification
-    const loadedProductsFromSource: Product[] = getAllProducts();
+    const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
+    let loadedProductsFromSource: Product[];
+    if (storedProducts) {
+      try {
+        loadedProductsFromSource = JSON.parse(storedProducts);
+      } catch (e) {
+        console.error("Failed to parse products from localStorage, falling back to default", e);
+        loadedProductsFromSource = getAllProducts();
+      }
+    } else {
+      loadedProductsFromSource = getAllProducts();
+    }
     
     setProductos(loadedProductsFromSource);
     const categories = Array.from(
@@ -89,7 +98,6 @@ export default function ListaCostosPage() {
 
   useEffect(() => {
     if (!isLoading) {
-        // Still save to localStorage so new additions/edits persist IF we revert the temporary source loading
         localStorage.setItem(MASTER_PRODUCT_LIST_KEY, JSON.stringify(productos));
         const categories = Array.from(
           new Set(productos.map(p => p.category).filter(cat => cat && cat.trim() !== ""))
@@ -98,7 +106,6 @@ export default function ListaCostosPage() {
     }
   }, [productos, isLoading]);
 
-  // Handlers for Add Product Form
   const handleAddInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAddForm({ ...addForm, [e.target.name]: e.target.value });
   };
@@ -115,8 +122,12 @@ export default function ListaCostosPage() {
     setAddForm({ ...addForm, category: value });
   };
 
+  const handleAddFeaturedChange = (checked: boolean) => {
+    setAddForm({ ...addForm, featured: checked });
+  };
+
   const resetAddForm = () => {
-    setAddForm({ name: "", price: "", category: "", stock: "5", imageFile: null });
+    setAddForm({ name: "", price: "", category: "", stock: "5", imageFile: null, featured: false });
     const fileInput = document.getElementById('addImageFile') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
@@ -176,11 +187,11 @@ export default function ListaCostosPage() {
       price: priceAsNumber,
       category: addForm.category,
       stock: stockAsNumber,
-      description: `Descripción de ${addForm.name}`, // Default description
-      longDescription: `Descripción más detallada de ${addForm.name}`, // Default long description
+      description: `Descripción de ${addForm.name}`,
+      longDescription: `Descripción más detallada de ${addForm.name}`,
       images: [imageUrl],
       currency: '$',
-      featured: false,
+      featured: addForm.featured,
       sku: `SKU-${newId}`,
       brand: 'Marca Ejemplo',
       tags: [addForm.category.toLowerCase()]
@@ -191,7 +202,6 @@ export default function ListaCostosPage() {
     setIsSubmittingAdd(false);
   };
 
-  // Handlers for Edit Modal
   const handleEdit = (producto: Product) => {
     setCurrentProductToEdit(producto);
     setIsEditModalOpen(true);
@@ -202,12 +212,10 @@ export default function ListaCostosPage() {
       prevProductos.map(p => p.id === updatedProduct.id ? updatedProduct : p)
     );
     toast({ title: "Éxito", description: `Producto "${updatedProduct.name}" actualizado.` });
-    setIsEditModalOpen(false); // Close modal in parent
+    setIsEditModalOpen(false); 
     setCurrentProductToEdit(null);
   };
 
-
-  // Handlers for Delete Dialog
   const handleDeleteInitiation = (id: string) => {
     setProductToDeleteId(id);
     setIsDeleteDialogOpen(true);
@@ -226,7 +234,6 @@ export default function ListaCostosPage() {
     setProductToDeleteId(null);
     setIsDeleteDialogOpen(false);
   };
-
 
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "all") {
@@ -264,7 +271,7 @@ export default function ListaCostosPage() {
     <div className="space-y-6">
       <PageHeader
         title="Lista de Costos Privados (Lista Madre)"
-        description="Gestiona los costos, stock e imágenes de tus productos. Los cambios aquí afectarán otras secciones."
+        description="Gestiona los costos, stock, imágenes y si un producto es destacado. Los cambios aquí afectarán otras secciones."
       />
       <Card id="add-product-form-card" className="shadow-lg">
         <CardHeader>
@@ -305,6 +312,16 @@ export default function ListaCostosPage() {
                 <Label htmlFor="addImageFile">Imagen del Producto</Label>
                 <Input id="addImageFile" type="file" name="imageFile" accept="image/*" onChange={handleAddFileChange} />
                 {addForm.imageFile && <p className="text-xs mt-1 text-muted-foreground">Archivo seleccionado: {addForm.imageFile.name}</p>}
+              </div>
+               <div className="flex items-center space-x-2 mt-2 md:col-span-1 lg:col-span-3">
+                <Checkbox
+                  id="add-featured"
+                  checked={addForm.featured}
+                  onCheckedChange={handleAddFeaturedChange}
+                />
+                <Label htmlFor="add-featured" className="cursor-pointer text-sm font-medium">
+                  Marcar como Producto Destacado
+                </Label>
               </div>
             </div>
             <div className="flex space-x-2 pt-2">
@@ -349,6 +366,7 @@ export default function ListaCostosPage() {
                   <TableHead className="text-right">Precio Costo</TableHead>
                   <TableHead className="text-right">Stock</TableHead>
                   <TableHead>Categoría</TableHead>
+                  <TableHead className="text-center">Destacado</TableHead>
                   <TableHead className="text-right w-[150px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -358,7 +376,7 @@ export default function ListaCostosPage() {
                     <Fragment key={category}>
                       {(categoryFilter === "all" || categoryFilter === category) && productsInCategory.length > 0 && (
                          <TableRow className="bg-muted/50 hover:bg-muted/50 sticky top-0 z-10">
-                           <TableCell colSpan={7} className="font-semibold text-primary text-lg py-3">
+                           <TableCell colSpan={8} className="font-semibold text-primary text-lg py-3">
                              {category} ({productsInCategory.length})
                            </TableCell>
                          </TableRow>
@@ -395,8 +413,11 @@ export default function ListaCostosPage() {
                             {(producto.stock > 0 && producto.stock <= LOW_STOCK_THRESHOLD) && <span className="block text-xs">(Bajo Stock)</span>}
                           </TableCell>
                           <TableCell>{producto.category}</TableCell>
+                          <TableCell className="text-center">
+                            {producto.featured ? <Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mx-auto" /> : <Star className="h-5 w-5 text-muted-foreground/50 mx-auto" />}
+                          </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmittingAdd /* Disable edit while add is submitting too */}>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(producto)} className="mr-1" disabled={isSubmittingAdd}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleDeleteInitiation(producto.id)} className="text-destructive hover:text-destructive" disabled={isSubmittingAdd}>
@@ -409,7 +430,7 @@ export default function ListaCostosPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center h-24">
+                    <TableCell colSpan={8} className="text-center h-24">
                       {categoryFilter !== "all" ? `No hay productos en la categoría "${categoryFilter}".` : "No hay productos para mostrar. Agrega algunos usando el formulario de arriba."}
                     </TableCell>
                   </TableRow>
@@ -421,7 +442,7 @@ export default function ListaCostosPage() {
       </Card>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        if (!open) cancelDelete(); // Ensure state is reset if closed externally
+        if (!open) cancelDelete();
         else setIsDeleteDialogOpen(true);
       }}>
         <AlertDialogContent>
@@ -454,5 +475,3 @@ export default function ListaCostosPage() {
     </div>
   );
 }
-
-    

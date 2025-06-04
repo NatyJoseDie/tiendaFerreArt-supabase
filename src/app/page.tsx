@@ -9,9 +9,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from "embla-carousel-autoplay";
 import { useEffect, useState, useMemo } from 'react';
 import type { Product } from '@/lib/types';
-import { getAllProducts } from '@/data/mock-products';
+import { getAllProducts } from '@/data/mock-products'; // This will now be the source from localStorage if available
 import { ProductCard } from '@/components/products/product-card';
-// Removed Input, Label, useToast as newsletter is now in footer
+import { usePathname } from 'next/navigation';
 
 const mainBannerImages = [
   { src: 'https://placehold.co/1200x500.png?text=Super+Oferta+Invierno', alt: 'Oferta de Invierno', hint: 'winter sale', title: 'GRAN LIQUIDACIÓN DE INVIERNO', description: 'Descuentos increíbles en toda la colección.' },
@@ -24,30 +24,41 @@ const categories = [
   'TECNO', 'LIBRERIA', 'VERANO', 'SOQUETES', 'MODA'
 ];
 
+const MASTER_PRODUCT_LIST_KEY = 'masterProductList';
+
 export default function HomePage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  // Removed newsletter state as it's now in footer
+  const pathname = usePathname(); // To re-trigger useEffect if needed
   
   useEffect(() => {
-    const products = getAllProducts(); 
-    setAllProducts(products);
-  }, []);
+    const storedProducts = localStorage.getItem(MASTER_PRODUCT_LIST_KEY);
+    let productsToSet: Product[];
+    if (storedProducts) {
+      try {
+        productsToSet = JSON.parse(storedProducts);
+      } catch (e) {
+        console.error("Failed to parse products from localStorage for HomePage, falling back to default", e);
+        productsToSet = getAllProducts(); // getAllProducts from mock-data if local storage fails
+      }
+    } else {
+      productsToSet = getAllProducts(); // getAllProducts from mock-data
+    }
+    setAllProducts(productsToSet);
+  }, [pathname]); // Re-fetch from localStorage if path changes (e.g., after admin updates)
 
   const featuredProducts = useMemo(() => {
-    // Show up to 8 featured products
     return allProducts.filter(p => p.featured).slice(0, 8);
   }, [allProducts]);
 
   const newArrivalProducts = useMemo(() => {
-    // Show up to 4 new arrival products
-    return allProducts.slice(0, 4);
+    // For now, let's take the latest added products based on their ID (assuming higher ID = newer)
+    // or simply the first few if IDs aren't strictly sequential for newness
+    return [...allProducts].sort((a, b) => parseInt(b.id) - parseInt(a.id)).slice(0, 4);
   }, [allProducts]);
 
-  // Removed handleNewsletterSubmit as it's now in footer
 
   return (
     <div className="space-y-12">
-      {/* Hero Section - Carousel */}
       <section className="w-full">
         <Carousel
           opts={{ align: "start", loop: true }}
@@ -96,7 +107,6 @@ export default function HomePage() {
         </Carousel>
       </section>
 
-      {/* Main Categories Section */}
       <section>
         <h2 className="text-2xl font-semibold tracking-tight text-center mb-8">
           CATEGORÍAS PRINCIPALES
@@ -112,7 +122,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products Section */}
       {featuredProducts.length > 0 && (
         <section>
           <h2 className="text-2xl font-semibold tracking-tight text-center mb-8 mt-12">
@@ -133,7 +142,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* New Arrivals Section */}
       {newArrivalProducts.length > 0 && (
         <section>
           <h2 className="text-2xl font-semibold tracking-tight text-center mb-8 mt-12">
@@ -147,9 +155,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Newsletter Section Removed - Now in Footer */}
-
-      {/* Placeholder for other sections from original app if needed */}
       <section className="bg-secondary/50 p-8 rounded-lg shadow mt-12">
          <div className="text-center">
           <h2 className="text-2xl font-semibold tracking-tight mb-4">Herramientas de IA</h2>

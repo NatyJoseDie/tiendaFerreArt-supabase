@@ -6,6 +6,7 @@ import type { Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -50,6 +51,7 @@ interface EditFormState {
   tags: string[];
   brand: string;
   sku: string;
+  featured: boolean;
 }
 
 export function EditProductModal({
@@ -78,11 +80,12 @@ export function EditProductModal({
         tags: productToEdit.tags || [],
         brand: productToEdit.brand || '',
         sku: productToEdit.sku || '',
+        featured: productToEdit.featured || false,
       });
     } else {
-      setFormState(null); // Reset form when no product is being edited or modal closes
+      setFormState(null);
     }
-  }, [productToEdit, isOpen]); // Depend on isOpen to reset form when modal is closed
+  }, [productToEdit, isOpen]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!formState) return;
@@ -106,6 +109,11 @@ export function EditProductModal({
   const handleTagsChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!formState) return;
     setFormState({ ...formState, tags: e.target.value.split(',').map(tag => tag.trim()) });
+  };
+
+  const handleFeaturedChange = (checked: boolean) => {
+    if (!formState) return;
+    setFormState({ ...formState, featured: checked });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -160,7 +168,7 @@ export function EditProductModal({
     }
 
     const updatedProductData: Product = {
-      ...productToEdit, // Preserve other original product fields not in the form explicitly
+      ...productToEdit, 
       id: formState.id,
       name: formState.name,
       price: priceAsNumber,
@@ -168,16 +176,16 @@ export function EditProductModal({
       stock: stockAsNumber,
       description: formState.description,
       longDescription: formState.longDescription,
-      images: imageUrl ? [imageUrl] : productToEdit.images, // Use new image if uploaded, else keep old
+      images: imageUrl ? [imageUrl] : productToEdit.images,
       tags: formState.tags,
       brand: formState.brand,
       sku: formState.sku,
-      // featured, specifications, reviews would be preserved from productToEdit
+      featured: formState.featured,
     };
 
     onProductUpdate(updatedProductData);
     setIsSubmitting(false);
-    onOpenChange(false); // Close the modal
+    onOpenChange(false);
   };
 
   if (!isOpen || !formState) {
@@ -246,6 +254,17 @@ export function EditProductModal({
             <Input id="edit-tags" name="tags" value={formState.tags.join(', ')} onChange={handleTagsChange} placeholder="Ej: oferta, nuevo, electronica"/>
           </div>
 
+          <div className="flex items-center space-x-2 mt-2">
+            <Checkbox
+                id="edit-featured"
+                checked={formState.featured}
+                onCheckedChange={(checked) => handleFeaturedChange(checked as boolean)}
+            />
+            <Label htmlFor="edit-featured" className="cursor-pointer text-sm font-medium">
+                Marcar como Producto Destacado
+            </Label>
+          </div>
+
           <div>
             <Label htmlFor="edit-imageFile">Imagen del Producto</Label>
             <Input id="edit-imageFile" type="file" name="imageFile" accept="image/*" onChange={handleFileChange} className="mb-2"/>
@@ -280,5 +299,3 @@ export function EditProductModal({
     </Dialog>
   );
 }
-
-    
