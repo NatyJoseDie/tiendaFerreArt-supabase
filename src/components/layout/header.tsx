@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, Search, ShoppingCart, LogIn, UserPlus, LayoutDashboard } from 'lucide-react'; // Added LayoutDashboard
+import { Heart, Search, ShoppingCart, LogIn, UserPlus, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useEffect, useState } from 'react';
@@ -27,6 +27,7 @@ export function Header() {
 
   const showAuthLinks = isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard');
   const showDashboardLink = isClient && user && !pathname.startsWith('/dashboard');
+  const showSearchBar = pathname === '/products' || pathname.startsWith('/products/');
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card backdrop-blur supports-[backdrop-filter]:bg-card/90">
@@ -49,15 +50,17 @@ export function Header() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center space-x-3 ml-auto"> {/* Use ml-auto to push to the right */}
-          <div className="relative flex items-center w-32 sm:w-40 md:w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar"
-              className="pl-10 pr-3 py-2 text-sm rounded-full border h-9"
-            />
-          </div>
+        <div className="flex items-center space-x-3 ml-auto">
+          {showSearchBar && (
+            <div className="relative flex items-center w-32 sm:w-40 md:w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar"
+                className="pl-10 pr-3 py-2 text-sm rounded-full border h-9"
+              />
+            </div>
+          )}
           <div className="flex items-center space-x-1">
             <Button variant="ghost" size="icon" aria-label="Shopping Cart" className="relative h-9 w-9">
               <ShoppingCart className="h-5 w-5 text-foreground" />
@@ -68,7 +71,6 @@ export function Header() {
             <span className="text-xs text-foreground hidden sm:inline">$0.00</span>
           </div>
 
-          {/* Auth and Dashboard Links */}
           {showAuthLinks && (
             <>
               <Button variant="ghost" size="sm" asChild>
@@ -95,7 +97,6 @@ export function Header() {
           )}
         </div>
       </div>
-      {/* Mobile Navigation Links (optional, if you want them visible on mobile too) */}
       <div className="md:hidden flex flex-wrap items-center justify-center space-x-3 p-2 border-t">
           {mainNavLinks.map((link) => (
             <Link
