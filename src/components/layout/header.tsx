@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useEffect, useState } from 'react';
 import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export function Header() {
   const [user, setUser] = useState<User | null>(null);
@@ -44,13 +45,16 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-xs font-medium text-foreground transition-colors hover:text-primary"
+              className={cn(
+                "text-xs font-medium text-foreground transition-colors hover:text-primary",
+                pathname === link.href && "text-primary font-semibold"
+              )}
             >
               {link.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center space-x-3 ml-auto">
+        <div className="flex items-center space-x-2 sm:space-x-3 ml-auto">
           {showSearchBar && (
             <div className="relative flex items-center w-32 sm:w-40 md:w-48">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -88,7 +92,7 @@ export function Header() {
             </>
           )}
           {showDashboardLink && (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="default" size="sm" asChild> {/* Changed variant to default */}
               <Link href="/dashboard" className="text-xs">
                 <LayoutDashboard className="mr-1 h-4 w-4 sm:mr-2" />
                 Panel
@@ -102,7 +106,10 @@ export function Header() {
             <Link
               key={`${link.href}-mobile`}
               href={link.href}
-              className="text-xs font-medium text-foreground transition-colors hover:text-primary"
+              className={cn(
+                "text-xs font-medium text-foreground transition-colors hover:text-primary py-1 px-2",
+                 pathname === link.href && "text-primary font-semibold bg-muted rounded-md"
+              )}
             >
               {link.label}
             </Link>
