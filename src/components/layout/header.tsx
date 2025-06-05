@@ -28,7 +28,7 @@ export function Header() {
   ];
 
   const showSearchBar = pathname === '/products' || pathname.startsWith('/products/');
-  const showAuthLinks = isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard');
+  const showAuthLinks = isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard') && pathname !== '/wholesale-register';
   const showDashboardLink = isClient && user && !pathname.startsWith('/dashboard');
 
 
@@ -94,7 +94,7 @@ export function Header() {
             </>
           )}
           {showDashboardLink && (
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="default" size="sm" asChild>
               <Link href="/dashboard" className="text-xs">
                 <LayoutDashboard className="mr-1 h-4 w-4 sm:mr-2" />
                 Panel
