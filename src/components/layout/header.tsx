@@ -10,11 +10,16 @@ import type { User } from '@/lib/authUtils';
 import { getUserFromLocalStorage } from '@/lib/authUtils';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useCart } from '@/context/cart-context'; // Import useCart
 
 export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
+  const { getItemCount, getCartTotal, toggleCart } = useCart(); // Get cart functions
+
+  const itemCount = getItemCount();
+  const cartTotal = getCartTotal();
 
   useEffect(() => {
     setIsClient(true);
@@ -67,15 +72,17 @@ export function Header() {
               />
             </div>
           )}
-          <div className="flex items-center space-x-1">
-            <Button variant="ghost" size="icon" aria-label="Shopping Cart" className="relative h-9 w-9">
-              <ShoppingCart className="h-5 w-5 text-foreground" />
+          {/* Updated Cart Button/Link */}
+          <Button variant="ghost" size="icon" aria-label="Shopping Cart" className="relative h-9 w-9" onClick={toggleCart}>
+            <ShoppingCart className="h-5 w-5 text-foreground" />
+            {itemCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[0.6rem] rounded-full px-1 leading-tight">
-                0
+                {itemCount}
               </span>
-            </Button>
-            <span className="text-xs text-foreground hidden sm:inline">$0.00</span>
-          </div>
+            )}
+          </Button>
+          <span className="text-xs text-foreground hidden sm:inline">${cartTotal.toFixed(2)}</span>
+          
 
           {showAuthLinks && (
             <>

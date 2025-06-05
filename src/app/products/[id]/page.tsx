@@ -1,3 +1,6 @@
+
+'use client'; // Required for useState, useEffect and onClick handlers
+
 import { getProductById } from '@/data/mock-products';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shared/page-header';
@@ -8,22 +11,70 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, ShoppingCart, Tag, ListChecks, MessageSquare } from 'lucide-react';
-import type { ProductSpecification, ProductReview as ReviewType } from '@/lib/types';
+import { Star, ShoppingCart, Tag, ListChecks, MessageSquare, Minus, Plus } from 'lucide-react';
+import type { ProductSpecification, ProductReview as ReviewType, Product } from '@/lib/types';
+import { useCart } from '@/context/cart-context'; // Import useCart
+import { useEffect, useState } from 'react';
+import { Input } from '@/components/ui/input';
 
-export async function generateStaticParams() {
-  const { mockProducts } = await import('@/data/mock-products');
-  return mockProducts.map((product) => ({
-    id: product.id,
-  }));
-}
+// Removed generateStaticParams as it causes issues with client components in this context
+// export async function generateStaticParams() {
+//   const { mockProducts } = await import('@/data/mock-products');
+//   return mockProducts.map((product) => ({
+//     id: product.id,
+//   }));
+// }
 
 export default function ProductDetailsPage({ params }: { params: { id: string } }) {
-  const product = getProductById(params.id);
+  const { addItem } = useCart(); // Get addItem function from cart context
+  const [product, setProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchedProduct = getProductById(params.id);
+    if (fetchedProduct) {
+      setProduct(fetchedProduct);
+    }
+    setIsLoading(false);
+  }, [params.id]);
+
+  if (isLoading) {
+    // You might want to use your ProductDetailsLoading component here
+    // For simplicity, returning a simple loading text
+    return <div>Cargando detalles del producto...</div>;
+  }
 
   if (!product) {
     notFound();
   }
+
+  const handleAddToCart = () => {
+    if (product) {
+      addItem(product, quantity);
+      // Toast notification is handled within addItem in CartContext
+    }
+  };
+
+  const handleQuantityChange = (amount: number) => {
+    setQuantity(prevQuantity => {
+      const newQuantity = prevQuantity + amount;
+      if (newQuantity < 1) return 1;
+      if (newQuantity > product.stock) return product.stock;
+      return newQuantity;
+    });
+  };
+
+  const handleManualQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = parseInt(e.target.value, 10);
+    if (isNaN(value) || value < 1) {
+      value = 1;
+    } else if (value > product.stock) {
+      value = product.stock;
+    }
+    setQuantity(value);
+  };
+
 
   const renderStars = (rating: number) => {
     return Array(5).fill(null).map((_, i) => (
@@ -63,7 +114,30 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                 </p>
               )}
 
-              <Button size="lg" className="w-full mt-4" disabled={product.stock === 0}>
+              {product.stock > 0 && (
+                <div className="flex items-center space-x-3 mt-4">
+                  <Button variant="outline" size="icon" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input 
+                    type="number" 
+                    value={quantity} 
+                    onChange={handleManualQuantityInput}
+                    onBlur={(e) => { // Ensure quantity is valid on blur
+                        if (quantity < 1) setQuantity(1);
+                        if (quantity > product.stock) setQuantity(product.stock);
+                    }}
+                    min="1"
+                    max={product.stock}
+                    className="w-16 text-center h-10"
+                  />
+                  <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)} disabled={quantity >= product.stock}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              <Button size="lg" className="w-full mt-4" onClick={handleAddToCart} disabled={product.stock === 0 || quantity > product.stock}>
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
               </Button>
@@ -138,7 +212,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                   <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
                     <div className="flex items-center mb-2">
                       <Avatar className="h-10 w-10 mr-3">
-                        <AvatarImage src={review.avatarUrl || `https://placehold.co/40x40.png?text=${review.author.charAt(0)}`} alt={review.author} data-ai-hint="avatar person" />
+                        <AvatarImage src={review.avatarUrl || `https://placehold.co/40x40.png?text=${review.author.charAt(0)}`} alt={review.author} data-ai-hint="avatar person"/>
                         <AvatarFallback>{review.author.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
