@@ -26,15 +26,16 @@ export function Header() {
     { href: '/products', label: 'PRODUCTOS' },
   ];
 
+  const showSearchBar = pathname === '/products' || pathname.startsWith('/products/');
   const showAuthLinks = isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard');
   const showDashboardLink = isClient && user && !pathname.startsWith('/dashboard');
-  const showSearchBar = pathname === '/products' || pathname.startsWith('/products/');
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card backdrop-blur supports-[backdrop-filter]:bg-card/90">
       <div className="container flex h-20 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-1.5">
-          <Heart className="h-9 w-9 text-primary fill-primary" />
+          <Heart className="h-9 w-9 text-primary" fill="currentColor" /> {/* Ensured fill is currentColor if text-primary is used */}
           <div className="flex flex-col">
             <span className="font-bold text-3xl text-primary leading-none">AB</span>
             <span className="text-[0.6rem] text-muted-foreground tracking-wider leading-none mt-0.5">MAYORISTA</span>
@@ -92,7 +93,7 @@ export function Header() {
             </>
           )}
           {showDashboardLink && (
-            <Button variant="default" size="sm" asChild> {/* Changed variant to default */}
+            <Button variant="outline" size="sm" asChild> {/* Reverted to outline */}
               <Link href="/dashboard" className="text-xs">
                 <LayoutDashboard className="mr-1 h-4 w-4 sm:mr-2" />
                 Panel
@@ -101,6 +102,7 @@ export function Header() {
           )}
         </div>
       </div>
+      {/* Mobile navigation bar */}
       <div className="md:hidden flex flex-wrap items-center justify-center space-x-3 p-2 border-t">
           {mainNavLinks.map((link) => (
             <Link
