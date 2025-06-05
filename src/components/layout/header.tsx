@@ -6,7 +6,8 @@ import { Heart, Search, ShoppingCart, LogIn, UserPlus, LayoutDashboard } from 'l
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useEffect, useState } from 'react';
-import { getUserFromLocalStorage, type User } from '@/lib/authUtils';
+import type { User } from '@/lib/authUtils';
+import { getUserFromLocalStorage } from '@/lib/authUtils';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ export function Header() {
   useEffect(() => {
     setIsClient(true);
     setUser(getUserFromLocalStorage());
-  }, [pathname]); // Re-check user status on route change
+  }, [pathname]);
 
   const mainNavLinks = [
     { href: '/', label: 'INICIO' },
@@ -35,7 +36,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-card backdrop-blur supports-[backdrop-filter]:bg-card/90">
       <div className="container flex h-20 items-center">
         <Link href="/" className="mr-6 flex items-center space-x-1.5">
-          <Heart className="h-9 w-9 text-primary" fill="currentColor" /> {/* Ensured fill is currentColor if text-primary is used */}
+          <Heart className="h-9 w-9 text-primary" fill="currentColor" />
           <div className="flex flex-col">
             <span className="font-bold text-3xl text-primary leading-none">AB</span>
             <span className="text-[0.6rem] text-muted-foreground tracking-wider leading-none mt-0.5">MAYORISTA</span>
@@ -87,13 +88,13 @@ export function Header() {
               <Button variant="outline" size="sm" asChild>
                 <Link href="/wholesale-register" className="text-xs">
                   <UserPlus className="mr-1 h-4 w-4 sm:mr-2" />
-                   <span className="hidden sm:inline">REGISTRARSE</span>
+                  <span className="hidden sm:inline">REGISTRARSE</span>
                 </Link>
               </Button>
             </>
           )}
           {showDashboardLink && (
-            <Button variant="outline" size="sm" asChild> {/* Reverted to outline */}
+            <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard" className="text-xs">
                 <LayoutDashboard className="mr-1 h-4 w-4 sm:mr-2" />
                 Panel
