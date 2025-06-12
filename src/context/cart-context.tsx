@@ -52,12 +52,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (product: Product, quantityToAdd: number = 1) => {
     if (product.stock <= 0) {
+      console.error(`Attempted to add ${product.name} but it's out of stock.`);
       toast({
         title: 'Producto Agotado',
         description: `${product.name} no está disponible actualmente.`,
         variant: 'destructive',
       });
       return;
+    }
+
+    if (quantityToAdd <= 0) {
+        console.error(`Attempted to add ${product.name} with invalid quantity: ${quantityToAdd}.`);
+        toast({
+            title: 'Cantidad Inválida',
+            description: `Por favor, introduce una cantidad válida para ${product.name}.`,
+            variant: 'destructive',
+        });
+        return;
     }
 
     setCartItems((prevItems) => {
@@ -68,36 +79,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existingItemIndex > -1) {
         const updatedItems = [...prevItems];
         const existingItem = updatedItems[existingItemIndex];
-        const newQuantity = existingItem.quantity + quantityToAdd;
+        const newQuantityInCart = existingItem.quantity + quantityToAdd;
 
-        if (newQuantity > product.stock) {
+        if (newQuantityInCart > product.stock) {
+          console.error(`Cannot add ${quantityToAdd} more of ${product.name}. Stock: ${product.stock}, In cart: ${existingItem.quantity}, Requested total: ${newQuantityInCart}`);
           toast({
             title: 'Stock Insuficiente',
-            description: `Solo quedan ${product.stock} unidades de ${product.name}. No se pudo añadir la cantidad solicitada. Cantidad actual en carrito: ${existingItem.quantity}.`,
+            description: `Solo quedan ${product.stock} unidades de ${product.name}. Ya tienes ${existingItem.quantity} en el carrito. No se pueden añadir ${quantityToAdd} más.`,
             variant: 'destructive',
           });
-          // Optionally, set quantity to max available stock instead of doing nothing
-          // updatedItems[existingItemIndex] = {
-          //   ...existingItem,
-          //   quantity: product.stock,
-          // };
-          // return updatedItems;
-          return prevItems; // Or do not change if not enough stock for additional quantity
+          return prevItems; 
         }
         updatedItems[existingItemIndex] = {
           ...existingItem,
-          quantity: newQuantity,
+          quantity: newQuantityInCart,
         };
         toast({
           title: 'Cantidad Actualizada',
-          description: `${product.name} (x${newQuantity}) en tu carrito.`,
+          description: `${product.name} (x${newQuantityInCart}) en tu carrito.`,
         });
         return updatedItems;
       } else {
         if (quantityToAdd > product.stock) {
+           console.error(`Cannot add ${quantityToAdd} of ${product.name}. Stock: ${product.stock}`);
            toast({
             title: 'Stock Insuficiente',
-            description: `Solo quedan ${product.stock} unidades de ${product.name}. No se pudo añadir la cantidad solicitada.`,
+            description: `Solo quedan ${product.stock} unidades de ${product.name}. No se pudo añadir la cantidad solicitada de ${quantityToAdd}.`,
             variant: 'destructive',
           });
           return prevItems;
@@ -116,16 +123,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       prevItems.map((item) => {
         if (item.product.id === productId) {
           if (quantity <= 0) {
-            // This case should ideally be handled by removeItem or a separate flow
-            // For now, let's prevent quantity from going below 1 via direct update here.
-            // Or, alternatively, remove if quantity is 0.
-            // Let's remove if quantity becomes 0 or less.
             toast({
               title: 'Producto Eliminado',
               description: `${item.product.name} ha sido eliminado de tu carrito.`,
               variant: 'destructive'
             });
-            return null; // This will be filtered out
+            return null; 
           }
           if (quantity > item.product.stock) {
             toast({
@@ -138,7 +141,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return { ...item, quantity };
         }
         return item;
-      }).filter(item => item !== null) as CartItem[] // Filter out null items
+      }).filter(item => item !== null) as CartItem[] 
     );
   };
 
@@ -206,4 +209,3 @@ export function useCart() {
   }
   return context;
 }
-

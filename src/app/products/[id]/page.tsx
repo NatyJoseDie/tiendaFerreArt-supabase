@@ -11,19 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, ShoppingCart, Tag, ListChecks, MessageSquare, Minus, Plus } from 'lucide-react';
+import { Star, ShoppingCart, Tag, ListChecks, MessageSquare, Minus, Plus, Package } from 'lucide-react';
 import type { ProductSpecification, ProductReview as ReviewType, Product } from '@/lib/types';
 import { useCart } from '@/context/cart-context'; // Import useCart
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
-
-// Removed generateStaticParams as it causes issues with client components in this context
-// export async function generateStaticParams() {
-//   const { mockProducts } = await import('@/data/mock-products');
-//   return mockProducts.map((product) => ({
-//     id: product.id,
-//   }));
-// }
 
 export default function ProductDetailsPage({ params }: { params: { id: string } }) {
   const { addItem } = useCart(); // Get addItem function from cart context
@@ -32,17 +24,26 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     const fetchedProduct = getProductById(params.id);
     if (fetchedProduct) {
       setProduct(fetchedProduct);
+      // Reset quantity to 1 if product stock is 0 or less, or if product changes
+      if (fetchedProduct.stock <= 0) {
+        setQuantity(0);
+      } else {
+        setQuantity(1);
+      }
     }
     setIsLoading(false);
   }, [params.id]);
 
   if (isLoading) {
-    // You might want to use your ProductDetailsLoading component here
-    // For simplicity, returning a simple loading text
-    return <div>Cargando detalles del producto...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="text-xl text-muted-foreground">Cargando detalles del producto...</div>
+      </div>
+    );
   }
 
   if (!product) {
@@ -50,9 +51,8 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
   }
 
   const handleAddToCart = () => {
-    if (product) {
+    if (product && quantity > 0) {
       addItem(product, quantity);
-      // Toast notification is handled within addItem in CartContext
     }
   };
 
@@ -67,7 +67,11 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
 
   const handleManualQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = parseInt(e.target.value, 10);
-    if (isNaN(value) || value < 1) {
+    if (isNaN(value)) { // Handle empty input or non-numeric
+        setQuantity(1); // Or some other default, or allow empty state if desired
+        return;
+    }
+    if (value < 1) {
       value = 1;
     } else if (value > product.stock) {
       value = product.stock;
@@ -114,33 +118,43 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                 </p>
               )}
 
-              {product.stock > 0 && (
-                <div className="flex items-center space-x-3 mt-4">
-                  <Button variant="outline" size="icon" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input 
-                    type="number" 
-                    value={quantity} 
-                    onChange={handleManualQuantityInput}
-                    onBlur={(e) => { // Ensure quantity is valid on blur
-                        if (quantity < 1) setQuantity(1);
-                        if (quantity > product.stock) setQuantity(product.stock);
-                    }}
-                    min="1"
-                    max={product.stock}
-                    className="w-16 text-center h-10"
-                  />
-                  <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)} disabled={quantity >= product.stock}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="font-medium text-sm flex items-center mt-4">
+                <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                Stock disponible: <span className="font-bold ml-1">{product.stock} unidades</span>
+              </div>
 
-              <Button size="lg" className="w-full mt-4" onClick={handleAddToCart} disabled={product.stock === 0 || quantity > product.stock}>
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                {product.stock > 0 ? 'Añadir al Carrito' : 'Agotado'}
-              </Button>
+              {product.stock > 0 ? (
+                <>
+                  <div className="flex items-center space-x-3 mt-2">
+                    <Button variant="outline" size="icon" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input 
+                      type="number" 
+                      value={quantity} 
+                      onChange={handleManualQuantityInput}
+                      onBlur={(e) => { 
+                          if (quantity < 1 && product.stock > 0) setQuantity(1);
+                          else if (quantity < 1 && product.stock === 0) setQuantity(0);
+                          if (quantity > product.stock) setQuantity(product.stock);
+                      }}
+                      min="1" // Min is 1 if stock > 0
+                      max={product.stock}
+                      className="w-16 text-center h-10"
+                      disabled={product.stock === 0}
+                    />
+                    <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)} disabled={quantity >= product.stock}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button size="lg" className="w-full mt-4" onClick={handleAddToCart} disabled={quantity <= 0 || quantity > product.stock}>
+                    <ShoppingCart className="mr-2 h-5 w-5" />
+                    Añadir al Carrito
+                  </Button>
+                </>
+              ) : (
+                <p className="mt-4 p-3 bg-muted text-muted-foreground rounded-md text-center">Este producto está agotado.</p>
+              )}
               
               {product.tags && product.tags.length > 0 && (
                 <div className="mt-4">
