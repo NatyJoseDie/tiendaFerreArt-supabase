@@ -2,10 +2,9 @@
 'use client'; 
 
 import { getProductById } from '@/data/mock-products';
-import { notFound, useParams } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation'; // Added notFound
 import { PageHeader } from '@/components/shared/page-header';
 import { ProductImageGallery } from '@/components/products/product-image-gallery';
-// import { StockIndicator } from '@/components/products/stock-indicator'; // Replaced by direct stock display
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -16,108 +15,138 @@ import type { ProductSpecification, ProductReview as ReviewType, Product } from 
 import { useCart } from '@/context/cart-context';
 import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProductDetailsPage() {
   const { addItem } = useCart();
   const params = useParams();
-  const productId = params.id as string;
-  const { toast } = useToast(); // Initialize toast
+  const productIdFromParams = params.id as string; // Get ID directly from params
+  const { toast } = useToast();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log(`ProductDetailsPage: useEffect triggered for productId: ${productId}`);
+    console.log(`ProductDetailsPage: useEffect triggered for productIdFromParams: ${productIdFromParams}`);
     setIsLoading(true);
-    const fetchedProduct = getProductById(productId);
-    console.log("ProductDetailsPage: Fetched product from mock data:", fetchedProduct);
-    if (fetchedProduct) {
-      setProduct(fetchedProduct);
-      if (fetchedProduct.stock <= 0) {
-        setQuantity(0); // Product is out of stock
-        console.log("ProductDetailsPage: Product out of stock, setting quantity to 0.");
+    if (productIdFromParams) {
+      const fetchedProduct = getProductById(productIdFromParams);
+      console.log("ProductDetailsPage: Fetched product from mock data:", JSON.stringify(fetchedProduct, null, 2));
+      if (fetchedProduct) {
+        setProduct(fetchedProduct);
+        if (fetchedProduct.stock <= 0) {
+          setQuantity(0);
+          console.log("ProductDetailsPage: Product out of stock, setting quantity to 0.");
+        } else {
+          setQuantity(1);
+          console.log("ProductDetailsPage: Product in stock, setting quantity to 1.");
+        }
       } else {
-        setQuantity(1); // Default to 1 if in stock
-        console.log("ProductDetailsPage: Product in stock, setting quantity to 1.");
+        console.warn("ProductDetailsPage: Product not found for ID:", productIdFromParams);
+        setProduct(null);
       }
     } else {
-      console.warn("ProductDetailsPage: Product not found for ID:", productId);
-      // Consider calling notFound() here if product is truly not found after initial load attempt
-      // For now, product will remain null, and UI should reflect that.
+        console.warn("ProductDetailsPage: productIdFromParams is undefined in useEffect.");
+        setProduct(null);
     }
     setIsLoading(false);
-  }, [productId]);
+  }, [productIdFromParams]);
 
   const handleAddToCart = () => {
-    console.log("ProductDetailsPage: handleAddToCart triggered.");
-    console.log("ProductDetailsPage: Current product state:", JSON.stringify(product)); // Log product state
-    console.log("ProductDetailsPage: Current quantity state:", quantity);
-    console.log("ProductDetailsPage: Current isLoading state:", isLoading);
+    console.log("ProductDetailsPage: ===== handleAddToCart TRIGGERED =====");
+    console.log("ProductDetailsPage: isLoading:", isLoading);
+    console.log("ProductDetailsPage: product state:", JSON.stringify(product, null, 2));
+    console.log("ProductDetailsPage: quantity state:", quantity);
 
     if (isLoading) {
-      console.warn("ProductDetailsPage: Add to cart called while product details are loading.");
+      console.warn("ProductDetailsPage: Add to cart called while product details are loading. ABORTING.");
       toast({ title: "Cargando...", description: "Espere a que carguen los detalles del producto.", variant: "default" });
       return;
     }
 
     if (!product || typeof product.id === 'undefined' || typeof product.stock === 'undefined' || typeof product.price === 'undefined' || typeof product.name === 'undefined') {
-      console.error("ProductDetailsPage: Product data is not available, incomplete, or invalid.", product);
+      console.error("ProductDetailsPage: Product data is not available or incomplete. ABORTING.", JSON.stringify(product, null, 2));
       toast({ title: "Error de Producto", description: "Datos del producto no disponibles o incompletos. Intente recargar la página.", variant: "destructive" });
       return;
     }
     
+    console.log(`ProductDetailsPage: Stock check: product.stock = ${product.stock}`);
     if (product.stock <= 0) {
-       console.warn(`ProductDetailsPage: Product ${product.name} is out of stock (stock: ${product.stock}).`);
+       console.warn(`ProductDetailsPage: Product ${product.name} is out of stock. ABORTING.`);
        toast({ title: "Producto Agotado", description: `${product.name} no tiene stock disponible.`, variant: "destructive" });
        return;
     }
 
+    console.log(`ProductDetailsPage: Quantity check: quantity = ${quantity}`);
     if (quantity <= 0) {
-      console.warn("ProductDetailsPage: Quantity is zero or less. Cannot add to cart.");
+      console.warn("ProductDetailsPage: Quantity is zero or less. Cannot add to cart. ABORTING.");
       toast({ title: "Cantidad Inválida", description: "Por favor, seleccione una cantidad mayor a cero.", variant: "destructive" });
       return;
     }
 
+    console.log(`ProductDetailsPage: Requested quantity vs stock: quantity = ${quantity}, product.stock = ${product.stock}`);
     if (quantity > product.stock) {
-      console.warn(`ProductDetailsPage: Requested quantity ${quantity} exceeds available stock ${product.stock}.`);
+      console.warn(`ProductDetailsPage: Requested quantity ${quantity} exceeds available stock ${product.stock}. ABORTING.`);
       toast({ title: "Stock Insuficiente", description: `No puede añadir más de ${product.stock} unidades de ${product.name}.`, variant: "destructive" });
       return;
     }
     
-    console.log(`ProductDetailsPage: All checks passed. Proceeding to call addItem with product ID ${product.id}, name ${product.name}, quantity ${quantity}`);
-    addItem(product, quantity);
-    console.log("ProductDetailsPage: addItem function call has been invoked.");
+    const productToAdd: Product = { // Create a plain object for safety
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      stock: product.stock, // stock at time of potential add
+      images: product.images,
+      category: product.category,
+      description: product.description,
+      currency: product.currency,
+      // Only include fields defined in the Product type
+      longDescription: product.longDescription,
+      featured: product.featured,
+      specifications: product.specifications,
+      reviews: product.reviews,
+      sku: product.sku,
+      brand: product.brand,
+      tags: product.tags,
+    };
+
+    console.log(`ProductDetailsPage: All checks passed. Calling addItem with productToAdd:`, JSON.stringify(productToAdd, null, 2), `and quantity: ${quantity}`);
+    try {
+      addItem(productToAdd, quantity);
+      console.log("ProductDetailsPage: addItem function call has been COMPLETED.");
+    } catch (e) {
+      console.error("ProductDetailsPage: ERROR during addItem call:", e);
+      toast({ title: "Error Inesperado", description: "Ocurrió un error al añadir al carrito.", variant: "destructive" });
+    }
   };
 
   const handleQuantityChange = (amount: number) => {
-    if (!product) return; // Should not happen if UI is correct
+    if (!product) return;
     setQuantity(prevQuantity => {
       const newQuantity = prevQuantity + amount;
-      if (newQuantity < 1) return 1;
-      if (newQuantity > product.stock) return product.stock;
+      if (newQuantity < 1 && product.stock > 0) return 1; // Min 1 if stock available
+      if (newQuantity < 0 && product.stock === 0) return 0; // Min 0 if no stock
+      if (newQuantity > product.stock) return product.stock; // Max stock
       return newQuantity;
     });
   };
 
   const handleManualQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!product) return; // Should not happen
+    if (!product) return;
     let value = parseInt(e.target.value, 10);
 
-    if (isNaN(value)) { // Handle empty input or non-numeric
-        setQuantity(product.stock > 0 ? 1 : 0); // Default to 1 if in stock, else 0
+    if (isNaN(value)) {
+        setQuantity(product.stock > 0 ? 1 : 0);
         return;
     }
-    if (value < 1 && product.stock > 0) { // If user types 0 or less, but stock exists
-        value = 1;
-    } else if (value < 0 && product.stock === 0) { // If stock is 0, quantity cannot be < 0
-        value = 0;
-    } else if (value > product.stock) { // Cap at available stock
-        value = product.stock;
-    }
+    if (value < 1 && product.stock > 0) value = 1;
+    else if (value < 0 && product.stock === 0) value = 0; // handles typing negative when stock is 0
+    else if (value > product.stock) value = product.stock;
+    
     setQuantity(value);
   };
+
 
   const renderStars = (rating: number) => {
     return Array(5).fill(null).map((_, i) => (
@@ -135,11 +164,10 @@ export default function ProductDetailsPage() {
 
   if (!product) {
     console.error("ProductDetailsPage: Product is null after loading, rendering notFound.");
-    // It's possible getProductById returned undefined and product state remained null
-    return notFound(); 
+    notFound(); 
   }
   
-  const isAddToCartDisabled = isLoading || !product || product.stock <= 0 || quantity <= 0 || quantity > product.stock;
+  const isAddToCartDisabled = isLoading || !product || product.stock <= 0 || quantity <= 0 || (product && quantity > product.stock);
 
   return (
     <div className="space-y-10">
@@ -186,20 +214,19 @@ export default function ProductDetailsPage() {
                     </Button>
                     <Input 
                       type="number" 
-                      value={quantity.toString()} // Ensure value is string for controlled input
+                      value={quantity.toString()}
                       onChange={handleManualQuantityInput}
                       onBlur={() => { 
-                          // Ensure quantity is valid on blur
                           if (!product) return;
                           if (quantity < 1 && product.stock > 0) setQuantity(1);
-                          else if (product.stock === 0) setQuantity(0); // If stock is 0, quantity must be 0
-                          else if (quantity < 1 && product.stock === 0 ) setQuantity(0);
+                          else if (product.stock === 0 && quantity !==0) setQuantity(0); 
+                          else if (quantity < 0 && product.stock === 0 ) setQuantity(0);
                           else if (quantity > product.stock) setQuantity(product.stock);
                       }}
                       min={product.stock > 0 ? 1: 0}
                       max={product.stock}
                       className="w-16 text-center h-10"
-                      disabled={product.stock === 0} // Disable if no stock
+                      disabled={product.stock === 0}
                     />
                     <Button variant="outline" size="icon" onClick={() => handleQuantityChange(1)} disabled={quantity >= product.stock}>
                       <Plus className="h-4 w-4" />
@@ -308,4 +335,4 @@ export default function ProductDetailsPage() {
     </div>
   );
 }
-
+    

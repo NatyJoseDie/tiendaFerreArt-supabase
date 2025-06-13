@@ -10,20 +10,24 @@ import type { User } from '@/lib/authUtils';
 import { getUserFromLocalStorage } from '@/lib/authUtils';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useCart } from '@/context/cart-context'; // Import useCart
+import { useCart } from '@/context/cart-context';
 
 export function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
-  const { getItemCount, getCartTotal, toggleCart } = useCart(); // Get cart functions
+  const { getItemCount, getCartTotal, toggleCart } = useCart(); 
 
   const itemCount = getItemCount();
   const cartTotal = getCartTotal();
 
+  console.log("Header: Rendering. Item count:", itemCount, "Cart total:", cartTotal, "Current pathname:", pathname);
+
+
   useEffect(() => {
     setIsClient(true);
     setUser(getUserFromLocalStorage());
+    console.log("Header: useEffect for user and pathname. User:", getUserFromLocalStorage(), "Pathname:", pathname);
   }, [pathname]);
 
   const mainNavLinks = [
@@ -32,6 +36,7 @@ export function Header() {
     { href: '/products', label: 'PRODUCTOS' },
   ];
 
+  // Show search bar only on /products page or /products/[id] pages
   const showSearchBar = pathname === '/products' || pathname.startsWith('/products/');
   const showAuthLinks = isClient && !user && pathname !== '/login' && !pathname.startsWith('/dashboard') && pathname !== '/wholesale-register';
   const showDashboardLink = isClient && user && !pathname.startsWith('/dashboard');
@@ -72,7 +77,6 @@ export function Header() {
               />
             </div>
           )}
-          {/* Updated Cart Button/Link */}
           <Button variant="ghost" size="icon" aria-label="Shopping Cart" className="relative h-9 w-9" onClick={toggleCart}>
             <ShoppingCart className="h-5 w-5 text-foreground" />
             {itemCount > 0 && (
@@ -110,7 +114,6 @@ export function Header() {
           )}
         </div>
       </div>
-      {/* Mobile navigation bar */}
       <div className="md:hidden flex flex-wrap items-center justify-center space-x-3 p-2 border-t">
           {mainNavLinks.map((link) => (
             <Link
@@ -128,3 +131,5 @@ export function Header() {
     </header>
   );
 }
+
+    
