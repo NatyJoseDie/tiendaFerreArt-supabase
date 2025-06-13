@@ -24,16 +24,21 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log(`ProductDetailsPage: useEffect triggered for params.id: ${params.id}`);
     setIsLoading(true);
     const fetchedProduct = getProductById(params.id);
+    console.log("ProductDetailsPage: Fetched product from mock data:", fetchedProduct);
     if (fetchedProduct) {
       setProduct(fetchedProduct);
-      // Reset quantity to 1 if product stock is 0 or less, or if product changes
       if (fetchedProduct.stock <= 0) {
         setQuantity(0);
+        console.log("ProductDetailsPage: Product out of stock, setting quantity to 0.");
       } else {
         setQuantity(1);
+        console.log("ProductDetailsPage: Product in stock, setting quantity to 1.");
       }
+    } else {
+      console.warn("ProductDetailsPage: Product not found for ID:", params.id);
     }
     setIsLoading(false);
   }, [params.id]);
@@ -47,12 +52,18 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
   }
 
   if (!product) {
+    console.error("ProductDetailsPage: Product is null, rendering notFound.");
     notFound();
   }
 
   const handleAddToCart = () => {
+    console.log("ProductDetailsPage: handleAddToCart called.");
     if (product && quantity > 0) {
+      console.log(`ProductDetailsPage: Attempting to add product:`, product, `Quantity: ${quantity}`);
       addItem(product, quantity);
+      console.log("ProductDetailsPage: addItem function called from cart context.");
+    } else {
+      console.warn("ProductDetailsPage: Cannot add to cart. Product:", product, `Quantity: ${quantity}`);
     }
   };
 
@@ -60,20 +71,20 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
     setQuantity(prevQuantity => {
       const newQuantity = prevQuantity + amount;
       if (newQuantity < 1) return 1;
-      if (newQuantity > product.stock) return product.stock;
+      if (newQuantity > product.stock) return product.stock; // product should not be null here
       return newQuantity;
     });
   };
 
   const handleManualQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = parseInt(e.target.value, 10);
-    if (isNaN(value)) { // Handle empty input or non-numeric
-        setQuantity(1); // Or some other default, or allow empty state if desired
-        return;
+    if (isNaN(value)) {
+      setQuantity(product && product.stock > 0 ? 1 : 0); // Default to 1 if stock, else 0
+      return;
     }
     if (value < 1) {
       value = 1;
-    } else if (value > product.stock) {
+    } else if (product && value > product.stock) {
       value = product.stock;
     }
     setQuantity(value);
@@ -104,7 +115,12 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
               <p className="text-3xl font-bold text-foreground">
                 {product.currency || '$'}{product.price.toFixed(2)}
               </p>
-              <StockIndicator stock={product.stock} />
+              
+              <div className="font-medium text-sm flex items-center mt-4">
+                <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                Stock disponible: <span className="font-bold ml-1">{product.stock} unidades</span>
+              </div>
+
               <p className="text-muted-foreground">{product.description}</p>
               
               {product.brand && (
@@ -118,11 +134,6 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                 </p>
               )}
 
-              <div className="font-medium text-sm flex items-center mt-4">
-                <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                Stock disponible: <span className="font-bold ml-1">{product.stock} unidades</span>
-              </div>
-
               {product.stock > 0 ? (
                 <>
                   <div className="flex items-center space-x-3 mt-2">
@@ -133,12 +144,12 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                       type="number" 
                       value={quantity} 
                       onChange={handleManualQuantityInput}
-                      onBlur={(e) => { 
+                      onBlur={() => { 
                           if (quantity < 1 && product.stock > 0) setQuantity(1);
                           else if (quantity < 1 && product.stock === 0) setQuantity(0);
-                          if (quantity > product.stock) setQuantity(product.stock);
+                          else if (quantity > product.stock) setQuantity(product.stock);
                       }}
-                      min="1" // Min is 1 if stock > 0
+                      min={product.stock > 0 ? 1: 0}
                       max={product.stock}
                       className="w-16 text-center h-10"
                       disabled={product.stock === 0}
@@ -147,7 +158,7 @@ export default function ProductDetailsPage({ params }: { params: { id: string } 
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button size="lg" className="w-full mt-4" onClick={handleAddToCart} disabled={quantity <= 0 || quantity > product.stock}>
+                  <Button size="lg" className="w-full mt-4" onClick={handleAddToCart} disabled={quantity <= 0 || quantity > product.stock || product.stock <= 0}>
                     <ShoppingCart className="mr-2 h-5 w-5" />
                     Añadir al Carrito
                   </Button>
