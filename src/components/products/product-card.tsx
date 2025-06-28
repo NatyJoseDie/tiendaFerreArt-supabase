@@ -20,9 +20,9 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, minimalDisplay = false }: ProductCardProps) {
-  const firstImage = product.images[0] || 'https://placehold.co/400x400.png';
-  const imageHint = firstImage.includes('placehold.co') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
-
+  // Usar una imagen placeholder local en lugar de servicios externos
+  const firstImage = product.images[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjZTVlN2ViIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjAwIiBmaWxsPSIjNmI3MjgwIiBmb250LXNpemU9IjE2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj5Qcm9kdWN0bzwvdGV4dD4KPC9zdmc+';
+  const imageHint = firstImage.includes('placeholder') || firstImage.includes('placehold') || firstImage.includes('data:image') ? product.category.toLowerCase() + " " + product.name.split(" ")[0].toLowerCase() : undefined;
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">

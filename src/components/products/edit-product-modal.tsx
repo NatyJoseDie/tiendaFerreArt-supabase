@@ -25,8 +25,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { storage } from '@/lib/firebaseConfig';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import { Loader2, Edit3, ImageIcon } from 'lucide-react';
 
@@ -112,7 +111,7 @@ export function EditProductModal({
   
   const handleTagsChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!formState) return;
-    setFormState({ ...formState, tags: e.target.value.split(',').map(tag => tag.trim()) });
+    setFormState({ ...formState, tags: e.target.value.split(',').map((tag: string) => tag.trim()) });
   };
 
   const handleFeaturedChange = (checked: boolean) => {
@@ -155,12 +154,26 @@ export function EditProductModal({
       const { id: uploadingToastId, dismiss: dismissUploadingToast } = toast({
         title: "Subiendo imagen...",
         description: "Por favor espera.",
-        duration: Infinity 
+        duration: Infinity
       });
       try {
-        const imageRef = ref(storage, `product_images/${Date.now()}_${formState.imageFile.name}`);
-        await uploadBytes(imageRef, formState.imageFile);
-        imageUrl = await getDownloadURL(imageRef);
+        // Código para subir la imagen a Supabase
+        const fileName = `product_images/${Date.now()}_${formState.imageFile.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images') // Usando el nombre del bucket que me proporcionaste
+          .upload(fileName, formState.imageFile);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicURLData } = supabase.storage
+          .from('product-images') // Usando el nombre del bucket que me proporcionaste
+          .getPublicUrl(fileName);
+        
+        imageUrl = publicURLData.publicUrl;
+
+
         dismissUploadingToast();
         toast({ title: "Imagen subida", description: "La imagen se ha subido correctamente." });
       } catch (error: any) {
@@ -177,7 +190,7 @@ export function EditProductModal({
     }
 
     const updatedProductData: Product = {
-      ...productToEdit, 
+      ...productToEdit,
       id: formState.id,
       name: formState.name,
       price: priceAsNumber,
@@ -197,35 +210,38 @@ export function EditProductModal({
     onOpenChange(false);
   };
 
+  // ...código existente arriba...
   if (!isOpen || !formState) {
     return null;
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border border-gray-200 bg-white">
         <DialogHeader>
-          <DialogTitle>Editar Producto: {productToEdit?.name}</DialogTitle>
-          <DialogDescription>
-            Realiza los cambios necesarios en la información del producto.
+          <DialogTitle className="text-2xl font-bold text-center mb-2">
+            Editar Producto
+          </DialogTitle>
+          <DialogDescription className="text-center mb-4">
+            Realizá los cambios necesarios en la información del producto.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-5 py-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-name">Nombre del producto</Label>
+              <Label htmlFor="edit-name">Nombre</Label>
               <Input id="edit-name" name="name" value={formState.name} onChange={handleInputChange} required />
             </div>
             <div>
-              <Label htmlFor="edit-price">Precio costo ($)</Label>
+              <Label htmlFor="edit-price">Costo ($)</Label>
               <Input id="edit-price" name="price" type="number" value={formState.price} onChange={handleInputChange} required min="0" step="0.01" />
             </div>
             <div>
-              <Label htmlFor="edit-stock">Stock Disponible</Label>
+              <Label htmlFor="edit-stock">Stock</Label>
               <Input id="edit-stock" name="stock" type="number" value={formState.stock} onChange={handleInputChange} required min="0" />
             </div>
             <div>
-              <Label htmlFor="edit-category-select">Categoría Existente</Label>
+              <Label htmlFor="edit-category-select">Categoría</Label>
               <Select name="category" value={formState.category} onValueChange={handleCategoryChange}>
                 <SelectTrigger id="edit-category-select">
                   <SelectValue placeholder="Seleccionar categoría" />
@@ -237,8 +253,8 @@ export function EditProductModal({
                 </SelectContent>
               </Select>
             </div>
-             <div>
-              <Label htmlFor="edit-newCategoryName">O Crear/Editar a Nueva Categoría</Label>
+            <div>
+              <Label htmlFor="edit-newCategoryName">Nueva Categoría</Label>
               <Input 
                 id="edit-newCategoryName" 
                 name="newCategoryName" 
@@ -247,7 +263,7 @@ export function EditProductModal({
                 onChange={handleInputChange} 
               />
             </div>
-             <div>
+            <div>
               <Label htmlFor="edit-brand">Marca</Label>
               <Input id="edit-brand" name="brand" value={formState.brand} onChange={handleInputChange} />
             </div>
@@ -258,48 +274,47 @@ export function EditProductModal({
           </div>
 
           <div>
-            <Label htmlFor="edit-description">Descripción Corta</Label>
-            <Textarea id="edit-description" name="description" value={formState.description} onChange={handleInputChange} required rows={3} />
+            <Label htmlFor="edit-description">Descripción corta</Label>
+            <Textarea id="edit-description" name="description" value={formState.description} onChange={handleInputChange} required rows={2} />
           </div>
           <div>
-            <Label htmlFor="edit-longDescription">Descripción Larga</Label>
-            <Textarea id="edit-longDescription" name="longDescription" value={formState.longDescription} onChange={handleInputChange} rows={5} />
+            <Label htmlFor="edit-longDescription">Descripción larga</Label>
+            <Textarea id="edit-longDescription" name="longDescription" value={formState.longDescription} onChange={handleInputChange} rows={3} />
           </div>
           <div>
             <Label htmlFor="edit-tags">Etiquetas (separadas por coma)</Label>
             <Input id="edit-tags" name="tags" value={formState.tags.join(', ')} onChange={handleTagsChange} placeholder="Ej: oferta, nuevo, electronica"/>
           </div>
 
-          <div className="flex items-center space-x-2 mt-2">
+          <div className="flex items-center space-x-3 mt-2">
             <Checkbox
                 id="edit-featured"
                 checked={formState.featured}
                 onCheckedChange={(checked) => handleFeaturedChange(checked as boolean)}
             />
             <Label htmlFor="edit-featured" className="cursor-pointer text-sm font-medium">
-                Marcar como Producto Destacado
+                Producto destacado
             </Label>
           </div>
 
           <div>
-            <Label htmlFor="edit-imageFile">Imagen del Producto</Label>
+            <Label htmlFor="edit-imageFile">Imagen del producto</Label>
             <Input id="edit-imageFile" type="file" name="imageFile" accept="image/*" onChange={handleFileChange} className="mb-2"/>
-            {formState.imageFile && <p className="text-xs mt-1 text-muted-foreground">Nuevo archivo: {formState.imageFile.name}</p>}
+            {formState.imageFile && <p className="text-xs mt-1 text-blue-600">Nuevo archivo: {formState.imageFile.name}</p>}
             {formState.currentImageUrl && (
-              <div className="mt-2">
-                <p className="text-xs text-muted-foreground mb-1">Imagen actual:</p>
-                <Image src={formState.currentImageUrl} alt="Imagen actual" width={80} height={80} className="rounded object-cover aspect-square" onError={(e) => e.currentTarget.style.display='none'}/>
-                {!formState.imageFile && <p className="text-xs mt-1 text-muted-foreground">(Selecciona un nuevo archivo para reemplazarla)</p>}
+              <div className="mt-2 flex flex-col items-center">
+                <Image src={formState.currentImageUrl} alt="Imagen actual" width={90} height={90} className="rounded-full object-cover border shadow aspect-square" onError={(e) => e.currentTarget.style.display='none'}/>
+                {!formState.imageFile && <p className="text-xs mt-1 text-gray-400">(Seleccioná un nuevo archivo para reemplazarla)</p>}
               </div>
             )}
             {!formState.currentImageUrl && !formState.imageFile && (
-                 <div className="w-20 h-20 bg-muted rounded flex items-center justify-center mt-2">
-                    <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mt-2 border">
+                    <ImageIcon className="h-10 w-10 text-gray-400" />
                 </div>
             )}
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex justify-end gap-2">
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={isSubmitting}>
                 Cancelar
@@ -314,5 +329,6 @@ export function EditProductModal({
       </DialogContent>
     </Dialog>
   );
+// ...código existente abajo...
 }
 

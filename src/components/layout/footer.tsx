@@ -2,8 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Phone, Mail, MapPin, Facebook, Instagram, Send, ChevronRight } from 'lucide-react';
-import Image from 'next/image';
+import { Phone, Mail, MapPin, Facebook, Instagram, ChevronRight, CreditCard, DollarSign, Wallet, Smartphone, Gift, Truck, Store, Bike } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,23 +26,101 @@ const TikTokIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const paymentMethodsLogos = [
-  { src: 'https://placehold.co/50x30.png?text=Uala', alt: 'Ualá Bis', hint: 'uala logo' },
-  { src: 'https://placehold.co/50x30.png?text=MC', alt: 'Mastercard', hint: 'mastercard logo' },
-  { src: 'https://placehold.co/50x30.png?text=Visa', alt: 'Visa', hint: 'visa logo' },
-  { src: 'https://placehold.co/50x30.png?text=Amex', alt: 'American Express', hint: 'amex logo' },
-  { src: 'https://placehold.co/50x30.png?text=NX', alt: 'Naranja X', hint: 'naranja x logo' },
-  { src: 'https://placehold.co/50x30.png?text=Cabal', alt: 'Cabal', hint: 'cabal logo' },
-  { src: 'https://placehold.co/50x30.png?text=Maestro', alt: 'Maestro', hint: 'maestro logo' },
-  { src: 'https://placehold.co/50x30.png?text=Diners', alt: 'Diners Club', hint: 'diners club logo' },
-  { src: 'https://placehold.co/50x30.png?text=EFT', alt: 'Efectivo', hint: 'cash icon' },
-  { src: 'https://placehold.co/50x30.png?text=TR', alt: 'Transferencia', hint: 'bank transfer icon' },
+const paymentMethods = [
+  { 
+    icon: <Smartphone className="w-6 h-6 text-[#00B2FF]" />, 
+    label: 'Ualá Bis',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#00B2FF]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#EB001B]" />, 
+    label: 'Mastercard',
+    bgColor: 'bg-red-50',
+    hoverBgColor: 'hover:bg-red-100',
+    iconColor: 'text-[#EB001B]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#1A1F71]" />, 
+    label: 'Visa',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#1A1F71]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#016FD0]" />, 
+    label: 'American Express',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#016FD0]'
+  },
+  { 
+    icon: <Gift className="w-6 h-6 text-[#FF6B00]" />, 
+    label: 'Naranja X',
+    bgColor: 'bg-orange-50',
+    hoverBgColor: 'hover:bg-orange-100',
+    iconColor: 'text-[#FF6B00]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#0033A0]" />, 
+    label: 'Cabal',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#0033A0]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#009CDE]" />, 
+    label: 'Maestro',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#009CDE]'
+  },
+  { 
+    icon: <CreditCard className="w-6 h-6 text-[#0079BE]" />, 
+    label: 'Diners Club',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#0079BE]'
+  },
+  { 
+    icon: <DollarSign className="w-6 h-6 text-[#4CAF50]" />, 
+    label: 'Efectivo',
+    bgColor: 'bg-green-50',
+    hoverBgColor: 'hover:bg-green-100',
+    iconColor: 'text-[#4CAF50]'
+  },
+  { 
+    icon: <Wallet className="w-6 h-6 text-[#9C27B0]" />, 
+    label: 'Transferencia',
+    bgColor: 'bg-purple-50',
+    hoverBgColor: 'hover:bg-purple-100',
+    iconColor: 'text-[#9C27B0]'
+  },
 ];
 
-const shippingMethodsLogos = [
-  { src: 'https://placehold.co/60x35.png?text=Correo', alt: 'Correo Argentino', hint: 'correo argentino logo' },
-  { src: 'https://placehold.co/50x35.png?text=Moto', alt: 'Moto Mensajería', hint: 'motorcycle delivery icon' },
-  { src: 'https://placehold.co/50x35.png?text=Local', alt: 'Retiro en Local', hint: 'store icon' },
+const shippingMethods = [
+  { 
+    icon: <Truck className="w-6 h-6 text-[#D32F2F]" />, 
+    label: 'Correo Argentino',
+    bgColor: 'bg-red-50',
+    hoverBgColor: 'hover:bg-red-100',
+    iconColor: 'text-[#D32F2F]'
+  },
+  { 
+    icon: <Bike className="w-6 h-6 text-[#FF9800]" />, 
+    label: 'Moto Mensajería',
+    bgColor: 'bg-orange-50',
+    hoverBgColor: 'hover:bg-orange-100',
+    iconColor: 'text-[#FF9800]'
+  },
+  { 
+    icon: <Store className="w-6 h-6 text-[#2196F3]" />, 
+    label: 'Retiro en Local',
+    bgColor: 'bg-blue-50',
+    hoverBgColor: 'hover:bg-blue-100',
+    iconColor: 'text-[#2196F3]'
+  },
 ];
 
 
@@ -77,33 +154,35 @@ export function Footer() {
           <div className="md:col-span-7 lg:col-span-8 space-y-6">
             <div>
               <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Medios de Pago</h3>
-              <div className="flex flex-wrap gap-2 items-center">
-                {paymentMethodsLogos.map((logo) => (
-                  <Image
-                    key={logo.alt}
-                    src={logo.src}
-                    alt={logo.alt}
-                    width={logo.alt === 'Ualá Bis' ? 60 : 50} // Uala logo is wider in example
-                    height={30}
-                    className="object-contain h-[30px]"
-                    data-ai-hint={logo.hint}
-                  />
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                {paymentMethods.map((method, index) => (
+                  <div 
+                    key={index} 
+                    className="flex flex-col items-center group"
+                    title={method.label}
+                  >
+                    <div className={`p-2 ${method.bgColor} rounded-full ${method.hoverBgColor} transition-colors ${method.iconColor}`}>
+                      {method.icon}
+                    </div>
+                    <span className="text-xs mt-1 text-gray-600">{method.label}</span>
+                  </div>
                 ))}
               </div>
             </div>
             <div>
               <h3 className="font-semibold text-foreground mb-3 uppercase tracking-wider">Medios de Envío</h3>
-              <div className="flex flex-wrap gap-3 items-center">
-                {shippingMethodsLogos.map((logo) => (
-                  <Image
-                    key={logo.alt}
-                    src={logo.src}
-                    alt={logo.alt}
-                    width={logo.alt === 'Correo Argentino' ? 70 : 50}
-                    height={35}
-                    className="object-contain h-[35px]"
-                    data-ai-hint={logo.hint}
-                  />
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                {shippingMethods.map((method, index) => (
+                  <div 
+                    key={index} 
+                    className="flex flex-col items-center group"
+                    title={method.label}
+                  >
+                    <div className={`p-2 ${method.bgColor} rounded-full ${method.hoverBgColor} transition-colors ${method.iconColor}`}>
+                      {method.icon}
+                    </div>
+                    <span className="text-xs mt-1 text-gray-600 text-center">{method.label}</span>
+                  </div>
                 ))}
               </div>
             </div>
@@ -172,7 +251,7 @@ export function Footer() {
         </div>
 
         <div className="border-t pt-8 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} AB Mayorista. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Tienda FerreArt. Todos los derechos reservados.</p>
           <p className="mt-1">Desarrollado con Next.js y ShadCN UI.</p>
         </div>
       </div>
